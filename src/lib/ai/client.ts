@@ -1,8 +1,7 @@
 /**
  * AI Client using Vercel AI SDK
  * 
- * All API calls go through Vercel AI Gateway
- * The SDK automatically uses the gateway when deployed on Vercel
+ * All API calls use the Vercel AI SDK with configured models
  */
 
 import { streamText } from "ai";

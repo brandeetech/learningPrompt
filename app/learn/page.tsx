@@ -27,9 +27,9 @@ const contentPlan = [
 
 export default function LearnPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-8">
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           Learning
         </p>
         <h1 className="text-3xl font-semibold text-ink">Learning hub</h1>

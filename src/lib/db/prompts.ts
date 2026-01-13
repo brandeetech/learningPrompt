@@ -107,6 +107,7 @@ export async function createPromptVersion(params: {
   content: string;
   model: string;
   systemInstructions?: string;
+  userMessage?: string;
   output?: string;
   evaluationScore?: number;
   evaluationData?: Record<string, any>;
@@ -135,6 +136,7 @@ export async function createPromptVersion(params: {
       content: params.content,
       model: params.model,
       systemInstructions: params.systemInstructions || null,
+      userMessage: params.userMessage || null,
       output: params.output || null,
       evaluationScore: params.evaluationScore || null,
       evaluationData: params.evaluationData || null,
@@ -159,9 +161,14 @@ export async function upsertPromptWithVersion(params: {
   userId?: string;
   title?: string;
   content: string;
+  systemPrompt?: string;
+  userMessage?: string;
   model: string;
   tokensUsed: number;
   intent?: string;
+  output?: string;
+  evaluationScore?: number;
+  evaluationData?: Record<string, any>;
 }): Promise<{ ok: boolean; prompt?: Prompt; version?: PromptVersion; message?: string }> {
 
   const db = getDb();
@@ -187,8 +194,13 @@ export async function upsertPromptWithVersion(params: {
     const versionResult = await createPromptVersion({
       promptId: promptResult.prompt.id,
       content: params.content,
+      systemInstructions: params.systemPrompt,
+      userMessage: params.userMessage,
       model: params.model,
       tokensUsed: params.tokensUsed,
+      output: params.output,
+      evaluationScore: params.evaluationScore,
+      evaluationData: params.evaluationData,
     });
 
     if (!versionResult.ok || !versionResult.version) {

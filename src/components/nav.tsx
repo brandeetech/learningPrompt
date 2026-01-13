@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { getCurrentUser, signOut } from "@/lib/auth";
 
 const links = [
   { href: "/", label: "Home" },
@@ -11,6 +13,28 @@ const links = [
 
 export function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      setLoading(false);
+    };
+    checkUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+      console.error('[Nav] Sign out error:', error);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/85 bg-white/90">
@@ -43,18 +67,33 @@ export function NavBar() {
               </Link>
             );
           })}
-          <Link
-            href="/auth"
-            className="ml-1 rounded-full border border-border px-3 py-2 text-sm font-semibold text-ink transition hover:border-brand hover:bg-card-alt"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/play"
-            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
-          >
-            Playground
-          </Link>
+          <div className="ml-2 flex items-center gap-2">
+            {loading ? (
+              <div className="h-9 w-20 rounded-full bg-card-alt animate-pulse" />
+            ) : user ? (
+              <>
+                <Link
+                  href="/play"
+                  className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+                >
+                  Practice
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink transition hover:border-brand hover:bg-card-alt"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/auth"
+                className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+              >
+                Get started
+              </Link>
+            )}
+          </div>
         </nav>
       </div>
     </header>

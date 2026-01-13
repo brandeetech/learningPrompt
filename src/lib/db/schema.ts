@@ -10,6 +10,7 @@ export type PromptCategory = "summary" | "analysis" | "compare" | "extract" | "c
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  passwordHash: text("password_hash"),
   role: text("role").notNull().default("free").$type<UserRole>(),
   tokensRemaining: integer("tokens_remaining").notNull().default(8000),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -35,9 +36,10 @@ export const promptVersions = pgTable("prompt_versions", {
   id: uuid("id").primaryKey().defaultRandom(),
   promptId: uuid("prompt_id").notNull().references(() => prompts.id, { onDelete: "cascade" }),
   versionNumber: integer("version_number").notNull(),
-  content: text("content").notNull(),
+  content: text("content").notNull(), // Full prompt (system + user message combined for backward compatibility)
   model: text("model").notNull(),
-  systemInstructions: text("system_instructions"),
+  systemInstructions: text("system_instructions"), // System prompt (optional)
+  userMessage: text("user_message"), // User message (optional, separated from system prompt)
   output: text("output"), // The actual LLM output
   evaluationScore: integer("evaluation_score").$type<number | null>(), // 0-100 score
   evaluationData: jsonb("evaluation_data").$type<Record<string, any> | null>(), // Full evaluation JSON

@@ -11,6 +11,8 @@ npm run dev
 
 Visit http://localhost:3000
 
+**Note**: Sign in is required to access the playground and start using the app.
+
 ## 📁 Project Structure
 
 ```
@@ -26,21 +28,18 @@ Visit http://localhost:3000
 │   └── page.tsx            # Landing page
 ├── src/
 │   ├── components/         # React components
-│   │   ├── nav.tsx         # Navigation bar
-│   │   └── demo-console.tsx
+│   │   └── nav.tsx         # Navigation bar
 │   └── lib/                # Library code
 │       ├── ai/             # AI/LLM integration
 │       │   ├── prompts/    # System prompts
-│       │   ├── providers/  # LLM providers
 │       │   ├── models/     # Model definitions
-│       │   └── client.ts   # AI client
+│       │   └── client.ts   # AI client (Vercel AI SDK)
 │       ├── db/             # Database layer
 │       │   ├── migrations/ # SQL migrations
 │       │   ├── schema.ts   # Drizzle schema
 │       │   ├── client.ts   # Database client
 │       │   ├── users.ts    # User queries
 │       │   ├── prompts.ts  # Prompt queries
-│       │   ├── usage.ts    # Usage tracking
 │       │   └── templates.ts
 │       ├── env.ts          # Environment config
 │       ├── promptEvaluator.ts
@@ -60,13 +59,17 @@ Visit http://localhost:3000
 Create a `.env.local` file:
 
 ```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# Database
+POSTGRES_URL=your_postgres_connection_string
+
+# Authentication
+JWT_SECRET=your-secret-key-change-in-production
 
 # Database (Direct Postgres connection)
-DATABASE_URL=postgresql://user:password@host:port/database
+POSTGRES_URL=postgresql://user:password@host:port/database
+
+# Authentication
+JWT_SECRET=your-secret-key-change-in-production-min-32-chars
 
 # AI Providers
 OPENAI_API_KEY=sk-...
@@ -88,11 +91,12 @@ npm run db:migrate
 
 ### Option 2: Manual SQL Execution
 
-1. Go to your Supabase project dashboard
-2. Open SQL Editor
-3. Execute files from `src/lib/db/migrations/` in order:
+1. Connect to your PostgreSQL database
+2. Execute files from `src/lib/db/migrations/` in order:
    - `000_create_migrations_table.sql`
    - `001_initial_schema.sql`
+   - `002_insert_templates.sql`
+   - `003_add_password_hash.sql`
 
 ## 📦 Available Scripts
 
@@ -111,10 +115,11 @@ npm run db:migrate
 - **Queries**: Organized in `src/lib/db/*.ts` files
 
 ### AI Layer
-- **Providers**: OpenAI, Anthropic, Google
+- **SDK**: Vercel AI SDK with direct model format (provider/model)
 - **Client**: Unified interface in `src/lib/ai/client.ts`
-- **Models**: Model definitions in `src/lib/ai/models/`
+- **Models**: Model definitions in `src/lib/ai/models/` (format: `openai/gpt-4o-mini`)
 - **Prompts**: System prompts in `src/lib/ai/prompts/`
+- **Gateway**: All API calls go through Vercel AI Gateway
 
 ### API Routes
 - `/api/evaluate` - Prompt evaluation endpoint

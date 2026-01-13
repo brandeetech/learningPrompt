@@ -1,47 +1,82 @@
 import { NextResponse } from "next/server";
-import { evaluatePrompt } from "@/lib/promptEvaluator";
 import { generateText } from "@/lib/ai/client";
 import { evaluationSystemPrompt, buildEvaluationUserPrompt } from "@/lib/ai/prompts/evaluation";
+import { evaluatePrompt } from "@/lib/promptEvaluator";
 
 export async function POST(request: Request) {
+  const requestId = `eval-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const startTime = performance.now();
+
   try {
     const body = await request.json();
     const { prompt, previousIterations = 0, userIntent } = body || {};
+    
+    console.log("[Evaluate API] Request received", {
+      requestId,
+      promptLength: prompt?.length || 0,
+      promptPreview: prompt?.substring(0, 100) + (prompt?.length > 100 ? "..." : "") || "none",
+      previousIterations,
+      hasUserIntent: !!userIntent,
+      userIntentPreview: userIntent?.substring(0, 50) + (userIntent?.length > 50 ? "..." : "") || "none",
+      timestamp: new Date().toISOString(),
+    });
+
     if (!prompt) {
+      console.warn("[Evaluate API] Validation failed: prompt required", { requestId });
       return NextResponse.json({ ok: false, message: "prompt required" }, { status: 400 });
     }
 
+    const llmStartTime = performance.now();
+    const userPrompt = buildEvaluationUserPrompt(prompt, userIntent, previousIterations);
+    
+    console.log("[Evaluate API] Requesting LLM evaluation", {
+      requestId,
+      model: "openai/gpt-4o-mini",
+      userPromptLength: userPrompt.length,
+      systemPromptLength: evaluationSystemPrompt.length,
+      temperature: 0.2,
+    });
+
+    const content = await generateText(
+      userPrompt,
+      "openai/gpt-4o-mini",
+      {
+        system: evaluationSystemPrompt,
+        temperature: 0.2,
+      }
+    );
+
+    const llmDuration = performance.now() - llmStartTime;
+    const totalDuration = performance.now() - startTime;
+
+    // Enrich with scores from local evaluator
     const localEvaluation = evaluatePrompt(prompt, { previousIterations, userIntent });
 
-    try {
-      const userPrompt = buildEvaluationUserPrompt(prompt, userIntent, previousIterations);
-      const content = await generateText(
-        userPrompt,
-        "openai/gpt-4o-mini",
-        {
-          system: evaluationSystemPrompt,
-          temperature: 0.2,
-        }
-      );
+    console.log("[Evaluate API] LLM evaluation completed", {
+      requestId,
+      llmDuration: `${llmDuration.toFixed(2)}ms`,
+      totalDuration: `${totalDuration.toFixed(2)}ms`,
+      contentLength: content.length,
+      contentPreview: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
+      overallScore: localEvaluation.score?.overall,
+    });
 
-      return NextResponse.json(
-        {
-          ok: true,
-          via: "vercel-gateway",
-          content,
-          evaluation: localEvaluation,
-        },
-        { status: 200 }
-      );
-    } catch (err) {
-      console.warn("Gateway evaluation failed, using local evaluation", err);
-    }
-
-    // Fallback to local evaluation
-    const fullEvaluation = evaluatePrompt(prompt, { previousIterations, userIntent });
-    return NextResponse.json({ ok: true, via: "local", evaluation: fullEvaluation });
+    return NextResponse.json(
+      {
+        ok: true,
+        content,
+        evaluation: localEvaluation,
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("evaluate POST error", error);
-    return NextResponse.json({ ok: false, message: "Unexpected error" }, { status: 500 });
+    const totalDuration = performance.now() - startTime;
+    console.error("[Evaluate API] Error", {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      totalDuration: `${totalDuration.toFixed(2)}ms`,
+    });
+    return NextResponse.json({ ok: false, message: "Failed to evaluate prompt" }, { status: 500 });
   }
 }

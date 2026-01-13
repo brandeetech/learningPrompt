@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Evaluation, estimateTokens } from "@/lib/promptEvaluator";
-import { stageCopy } from "@/lib/learningPath";
-import { promptTemplates } from "@/lib/templates";
 import Link from "next/link";
 import { getScoreColor, getScoreBgColor, getScoreLabel } from "@/lib/evaluationColors";
+import { getCurrentUser } from "@/lib/auth";
+import type { Template } from "@/lib/db/schema";
 
 type HistoryItem = {
   id: number;
@@ -27,22 +28,101 @@ const models = [
 const startingPrompt =
   "Act as a prompt coach. I want to write a prompt that extracts the top 3 customer complaints from support tickets. Help me design it.";
 
-export default function PlaygroundPage() {
-  const [prompt, setPrompt] = useState(startingPrompt);
+export default function PracticePage() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [userMessage, setUserMessage] = useState(startingPrompt);
   const [intent, setIntent] = useState("");
   const [model, setModel] = useState(models[0].id);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const searchParams = useSearchParams();
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        console.log("[Practice] User not authenticated, redirecting to auth");
+        router.push('/auth');
+      } else {
+        console.log("[Practice] User authenticated", { userId: user.id, email: user.email });
+        setIsAuthenticated(true);
+        setCurrentUser(user);
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  // Load template from URL if present
+  useEffect(() => {
+    const templateId = searchParams.get('template');
+    if (templateId && isAuthenticated) {
+      const loadTemplate = async () => {
+        try {
+          const response = await fetch(`/api/templates?id=${templateId}`);
+          const data = await response.json();
+          if (data.template) {
+            setUserMessage(data.template.content);
+            // Clear template from URL
+            router.replace('/play', { scroll: false });
+          }
+        } catch (error) {
+          console.error("[Practice] Error loading template:", error);
+        }
+      };
+      loadTemplate();
+    }
+  }, [searchParams, isAuthenticated, router]);
+
+  // Show loading state while checking auth
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand/20 border-t-brand mb-4" />
+          <p className="text-sm text-muted">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const latest = history[0];
 
-  const learningStage = latest?.evaluation.stage ?? "onboarding";
-  const stage = stageCopy[learningStage];
-
   const handleRun = async () => {
-    if (!prompt.trim()) return;
+    const fullPrompt = systemPrompt.trim() 
+      ? `${systemPrompt}\n\n${userMessage}` 
+      : userMessage;
+    
+    if (!userMessage.trim()) {
+      console.log("[Practice] Run cancelled: empty user message");
+      return;
+    }
+
+    const startTime = performance.now();
+    const tokensUsed = estimateTokens(fullPrompt);
+    const runId = `run-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log("[Practice] Starting prompt run", {
+      runId,
+      systemPromptLength: systemPrompt.length,
+      userMessageLength: userMessage.length,
+      fullPromptLength: fullPrompt.length,
+      intent: intent.trim() || "not provided",
+      model,
+      estimatedTokens: tokensUsed,
+      previousIterations: history.length,
+      timestamp: new Date().toISOString(),
+    });
+
     setLoading(true);
-    const tokensUsed = estimateTokens(prompt);
     let evaluation: Evaluation | null = null;
     let output: string | null = null;
 
@@ -52,42 +132,108 @@ export default function PlaygroundPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt,
+          prompt: fullPrompt,
           previousIterations: history.length,
           userIntent: intent.trim() || undefined,
         }),
       });
+
       const evalJson = await evalRes.json();
+      
+      console.log("[Practice] Evaluation received", {
+        runId,
+        status: evalRes.status,
+        hasEvaluation: !!evalJson.evaluation,
+        evaluationScore: evalJson.evaluation?.score?.overall,
+      });
+
       evaluation = evalJson.evaluation;
 
-      // Get actual LLM output (mock for now, replace with real API call)
-      // TODO: Replace with actual LLM API call
-      output = `Sample output for demonstration:\n\nBased on your prompt about extracting customer complaints, here's a structured response:\n\n1. Complaint categorization\n2. Frequency analysis\n3. Priority ranking\n\nNote: This is a demo output. Configure your LLM API keys to get real results.`;
+      // Get actual LLM output
+      const outputStartTime = performance.now();
+      console.log("[Practice] Generating output", {
+        runId,
+        model,
+        systemPromptLength: systemPrompt.length,
+        userMessageLength: userMessage.length,
+      });
+
+      const outputRes = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemPrompt: systemPrompt.trim() || undefined,
+          userMessage,
+          model,
+        }),
+      });
+
+      if (outputRes.ok) {
+        const outputData = await outputRes.json();
+        output = outputData.output || "";
+        const outputDuration = performance.now() - outputStartTime;
+        
+        console.log("[Practice] Output generated", {
+          runId,
+          outputLength: output.length,
+          duration: `${outputDuration.toFixed(2)}ms`,
+        });
+      } else {
+        const errorData = await outputRes.json();
+        console.error("[Practice] Output generation failed", {
+          runId,
+          error: errorData.error,
+        });
+      }
     } catch (error) {
-      console.error("Evaluation fallback", error);
+      console.error("[Practice] Error", {
+        runId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
 
     if (!evaluation) {
-      const { evaluatePrompt } = await import("@/lib/promptEvaluator");
-      evaluation = evaluatePrompt(prompt, {
-        previousIterations: history.length,
-        userIntent: intent.trim() || undefined,
-      });
-    } else {
-      // Ensure evaluation has score (for backward compatibility)
-      if (!evaluation.score) {
-        const { evaluatePrompt } = await import("@/lib/promptEvaluator");
-        const fullEvaluation = evaluatePrompt(prompt, {
-          previousIterations: history.length,
-          userIntent: intent.trim() || undefined,
+      console.error("[Practice] No evaluation received", { runId });
+      setLoading(false);
+      return;
+    }
+
+    // Store in database
+    if (currentUser && evaluation) {
+      try {
+        const saveRes = await fetch("/api/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUser.id,
+            prompt: fullPrompt,
+            systemPrompt: systemPrompt.trim() || undefined,
+            userMessage,
+            model,
+            tokensUsed,
+            intent: intent.trim() || undefined,
+            output,
+            evaluationScore: evaluation.score?.overall,
+            evaluationData: evaluation,
+          }),
         });
-        evaluation = { ...evaluation, score: fullEvaluation.score, intentMatch: fullEvaluation.intentMatch };
+
+        if (saveRes.ok) {
+          console.log("[Practice] Run saved to database", { runId });
+        } else {
+          const errorData = await saveRes.json();
+          console.error("[Practice] Failed to save run", { runId, error: errorData.message });
+        }
+      } catch (error) {
+        console.error("[Practice] Failed to save run", { runId, error });
       }
     }
 
+    const totalDuration = performance.now() - startTime;
     const entry: HistoryItem = {
       id: history.length + 1,
-      prompt,
+      prompt: fullPrompt,
       intent: intent.trim(),
       model,
       tokensUsed,
@@ -96,44 +242,40 @@ export default function PlaygroundPage() {
       timestamp: new Date().toISOString(),
     };
 
+    console.log("[Practice] Run completed", {
+      runId,
+      totalDuration: `${totalDuration.toFixed(2)}ms`,
+      historyLength: history.length + 1,
+      evaluationScore: evaluation?.score?.overall,
+      hasOutput: !!output,
+      outputLength: output?.length || 0,
+      intentMatch: evaluation?.intentMatch,
+    });
+
     setHistory([entry, ...history].slice(0, 6));
     setLoading(false);
   };
 
-  const recommendedTemplates = useMemo(() => promptTemplates.slice(0, 3), []);
-
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted">
-          Playground
-        </p>
-        <h1 className="text-3xl font-semibold text-ink">
-          Practice prompts with explain-first feedback
+    <div className="space-y-6 pt-8">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold text-ink">
+          Practice
         </h1>
-        <p className="max-w-2xl text-sm text-muted">
-          The prompt, model, and system instructions are always visible. Feedback is
-          structured: what happened, why, how to improve, optional rewrite. No numeric
-          scoring—only explanations and next steps.
+        <p className="text-sm text-muted">
+          Write your prompt, run it, and get educational feedback to improve.
         </p>
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span className="rounded-full bg-card px-3 py-1 font-semibold text-ink shadow-sm">
-            Stage: {stage.title}
-          </span>
-          <span className="rounded-full bg-card-alt px-3 py-1 text-muted">
-            Model visible · Versioned runs · Token-aware
-          </span>
-        </div>
       </div>
 
-      <div className="card grid gap-6 p-6 md:grid-cols-[1.1fr_0.9fr]">
+      <div className="card grid gap-6 p-6 lg:grid-cols-[1fr_1fr]">
+        {/* Left: Input */}
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {models.map((m) => (
               <button
                 key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  onClick={() => setModel(m.id)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                   model === m.id
                     ? "border-brand bg-brand text-white shadow-sm"
                     : "border-border text-ink hover:border-brand"
@@ -143,181 +285,109 @@ export default function PlaygroundPage() {
               </button>
             ))}
           </div>
+          
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-ink">Your Intent</label>
+            <label className="text-xs font-semibold text-ink">Your Intent (optional)</label>
             <input
               type="text"
               value={intent}
               onChange={(e) => setIntent(e.target.value)}
-              className="w-full rounded-xl border border-border bg-white px-4 py-2 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
-              placeholder="What do you want to achieve with this prompt? (e.g., 'Extract top 3 customer complaints')"
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+              placeholder="What do you want to achieve? (e.g., 'Extract top 3 customer complaints')"
             />
-            <p className="text-xs text-muted">
-              State your goal first. We&apos;ll compare it with your prompt to see how well they align.
-            </p>
           </div>
+
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-ink">Prompt</label>
+            <label className="text-xs font-semibold text-ink">System Prompt (optional)</label>
             <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={8}
-              className="w-full rounded-xl border border-border bg-white p-4 font-mono text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
-              placeholder="State the goal, audience, context, constraints, and desired format…"
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg border border-border bg-white p-3 font-mono text-xs text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+              placeholder="You are a helpful assistant. (System instructions that set context and behavior)"
             />
             <p className="text-xs text-muted">
-              Show system instructions and model in UI; don&apos;t hide them. Keep one
-              primary action per screen.
+              System prompt sets the AI&apos;s role and behavior. Leave empty if not needed.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleRun}
-              disabled={loading}
-              className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
-            >
-              {loading ? "Running…" : "Run prompt"}
-            </button>
-            <span className="text-xs text-muted">
-              Estimated tokens: {estimateTokens(prompt)} · Model: {model}
-            </span>
-            <span className="text-xs rounded-full bg-card px-3 py-1 text-ink shadow-sm">
-              Using Vercel AI Gateway
-            </span>
-          </div>
-          <div className="rounded-xl border border-border bg-card-alt p-4 text-sm text-ink">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Stage guidance
+          
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-ink">User Message</label>
+            <textarea
+              value={userMessage}
+              onChange={(e) => setUserMessage(e.target.value)}
+              rows={8}
+              className="w-full rounded-lg border border-border bg-white p-3 font-mono text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+              placeholder="Write your message here..."
+            />
+            <p className="text-xs text-muted">
+              This is the actual prompt or question you&apos;re asking the AI.
             </p>
-            <p className="mt-1 font-semibold text-ink">{stage.tip}</p>
-            <ul className="mt-2 grid gap-2 text-sm text-muted sm:grid-cols-2">
-              {stage.actions.map((action) => (
-                <li key={action} className="flex gap-2">
-                  <span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-accent" />
-                  <span>{action}</span>
-                </li>
-              ))}
-            </ul>
           </div>
+          
+          <button
+            onClick={handleRun}
+            disabled={loading || !userMessage.trim()}
+            className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
+          >
+            {loading ? "Running…" : "Run prompt"}
+          </button>
         </div>
 
+        {/* Right: Results */}
         <div className="space-y-4">
           {latest?.output && (
-            <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Prompt Output
+            <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+                Output
               </p>
-              <div className="mt-3 rounded-lg border border-border bg-card-alt p-4">
-                <pre className="whitespace-pre-wrap text-sm text-ink font-mono">
+              <div className="rounded border border-border bg-card-alt p-3">
+                <pre className="whitespace-pre-wrap text-xs text-ink font-mono">
                   {latest.output}
                 </pre>
               </div>
             </div>
           )}
-          <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Evaluation (education first)
+          
+          <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-3">
+              Evaluation
             </p>
             {latest ? (
               <EvaluationView item={latest} />
             ) : (
-              <p className="mt-2 text-sm text-muted">
-                Run the prompt to see the explain-first evaluation with scores and colors.
+              <p className="text-sm text-muted">
+                Run your prompt to see feedback.
               </p>
             )}
           </div>
 
-          <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Version history
+          {history.length > 0 && (
+            <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+                History ({history.length})
               </p>
-              <span className="text-[11px] text-muted">
-                {history.length} versions (local)
-              </span>
+              <ul className="space-y-1.5">
+                {history.slice(0, 3).map((item) => (
+                  <li
+                    key={item.id}
+                    onClick={() => {
+                    // Try to parse system prompt and user message if they were stored separately
+                    setUserMessage(item.prompt);
+                  }}
+                    className="cursor-pointer rounded border border-border bg-card-alt/50 p-2 text-xs text-muted hover:bg-card-alt transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-ink">V{item.id}</span>
+                      <span className="text-[10px]">{item.model}</span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-1">{item.prompt}</p>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="mt-3 space-y-2">
-              {history.map((item) => (
-                <li
-                  key={item.id}
-                  className="rounded-xl border border-border bg-card-alt/70 p-3 text-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-semibold text-ink">
-                      V{item.id} · {item.model}
-                    </span>
-                    <span className="text-xs text-muted">
-                      Tokens {item.tokensUsed} · Stage {item.evaluation.stage}
-                    </span>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted">{item.prompt}</p>
-                </li>
-              ))}
-              {history.length === 0 && (
-                <li className="rounded-xl border border-dashed border-border bg-card-alt/50 p-3 text-sm text-muted">
-                  No versions yet. Each run creates a version for reflection and restore.
-                </li>
-              )}
-            </ul>
-          </div>
+          )}
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {recommendedTemplates.map((tpl) => (
-          <div key={tpl.id} className="card p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {tpl.category}
-            </p>
-            <h3 className="mt-1 text-lg font-semibold text-ink">{tpl.title}</h3>
-            <p className="mt-2 text-sm text-muted">{tpl.intent}</p>
-            <pre className="mt-3 max-h-48 overflow-auto rounded-lg border border-border bg-card-alt p-3 text-xs text-ink">
-              {tpl.prompt}
-            </pre>
-            <p className="mt-2 text-xs text-muted">Why it works: {tpl.whyItWorks}</p>
-            <button
-              onClick={() => {
-                setPrompt(tpl.prompt);
-              }}
-              className="mt-3 w-full rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink transition hover:border-brand"
-            >
-              Load into prompt
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Learning section
-            </p>
-            <h3 className="text-lg font-semibold text-ink">
-              Reinforce fundamentals, patterns, and common mistakes
-            </h3>
-          </div>
-          <Link
-            href="/learn"
-            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-brand hover:text-white"
-          >
-            Open learning hub
-          </Link>
-        </div>
-        <ul className="mt-3 grid gap-2 text-sm text-muted md:grid-cols-3">
-          <li className="flex gap-2">
-            <span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-brand" />
-            Prompt fundamentals and rubric language reused in UI.
-          </li>
-          <li className="flex gap-2">
-            <span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-brand" />
-            Common mistakes with before/after examples.
-          </li>
-          <li className="flex gap-2">
-            <span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-brand" />
-            Templates mapped to stage progression to reduce overload.
-          </li>
-        </ul>
       </div>
     </div>
   );

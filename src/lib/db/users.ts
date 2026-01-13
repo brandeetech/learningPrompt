@@ -23,6 +23,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 export async function createUser(params: {
   id: string;
   email: string;
+  passwordHash?: string;
   role?: UserRole;
   tokensRemaining?: number;
 }): Promise<{ ok: boolean; user?: User; message?: string }> {
@@ -36,6 +37,7 @@ export async function createUser(params: {
     const newUser: NewUser = {
       id: params.id,
       email: params.email,
+      passwordHash: params.passwordHash,
       role: params.role || "free",
       tokensRemaining: params.tokensRemaining ?? 8000,
     };
