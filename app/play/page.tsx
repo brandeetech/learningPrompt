@@ -27,25 +27,17 @@ const models = [
 const startingPrompt =
   "Act as a prompt coach. I want to write a prompt that extracts the top 3 customer complaints from support tickets. Help me design it.";
 
-const totalTokens = 8000;
-
 export default function PlaygroundPage() {
   const [prompt, setPrompt] = useState(startingPrompt);
   const [intent, setIntent] = useState("");
   const [model, setModel] = useState(models[0].id);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [tokensLeft, setTokensLeft] = useState(totalTokens);
   const [loading, setLoading] = useState(false);
 
   const latest = history[0];
 
   const learningStage = latest?.evaluation.stage ?? "onboarding";
   const stage = stageCopy[learningStage];
-
-  const tokenUsagePercent = useMemo(() => {
-    const spent = totalTokens - tokensLeft;
-    return Math.min(100, Math.max(0, Math.round((spent / totalTokens) * 100)));
-  }, [tokensLeft]);
 
   const handleRun = async () => {
     if (!prompt.trim()) return;
@@ -105,7 +97,6 @@ export default function PlaygroundPage() {
     };
 
     setHistory([entry, ...history].slice(0, 6));
-    setTokensLeft(Math.max(0, tokensLeft - tokensUsed));
     setLoading(false);
   };
 
@@ -151,16 +142,6 @@ export default function PlaygroundPage() {
                 {m.label}
               </button>
             ))}
-            <span className="rounded-full bg-card px-3 py-2 text-xs text-muted shadow-sm">
-              Tokens left: {tokensLeft} / {totalTokens}
-            </span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-card-alt">
-            <div
-              className="h-full bg-brand transition-all"
-              style={{ width: `${tokenUsagePercent}%` }}
-              aria-label="token usage"
-            />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-ink">Your Intent</label>
@@ -192,7 +173,7 @@ export default function PlaygroundPage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleRun}
-              disabled={loading || tokensLeft <= 0}
+              disabled={loading}
               className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
             >
               {loading ? "Running…" : "Run prompt"}

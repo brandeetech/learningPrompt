@@ -1,7 +1,6 @@
 import { getDb } from "./client";
 import { prompts, promptVersions, type Prompt, type NewPrompt, type PromptVersion, type NewPromptVersion } from "./schema";
 import { eq, desc } from "drizzle-orm";
-import { createUsageLog } from "./usage";
 
 export async function getPromptById(promptId: string): Promise<Prompt | null> {
   
@@ -153,8 +152,8 @@ export async function createPromptVersion(params: {
 }
 
 /**
- * Create a prompt with its first version and log usage
- * This is a convenience function that combines prompt creation, versioning, and usage logging
+ * Create a prompt with its first version
+ * This is a convenience function that combines prompt creation and versioning
  */
 export async function upsertPromptWithVersion(params: {
   userId?: string;
@@ -195,14 +194,6 @@ export async function upsertPromptWithVersion(params: {
     if (!versionResult.ok || !versionResult.version) {
       return { ok: false, message: versionResult.message || "Failed to create version" };
     }
-
-    // Log usage
-    await createUsageLog({
-      userId,
-      promptVersionId: versionResult.version.id,
-      model: params.model,
-      tokensUsed: params.tokensUsed,
-    });
 
     return { ok: true, prompt: promptResult.prompt, version: versionResult.version };
   } catch (error) {

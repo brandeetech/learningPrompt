@@ -62,22 +62,6 @@ export const templates = pgTable("templates", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Usage logs table
-export const usageLogs = pgTable("usage_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  promptVersionId: uuid("prompt_version_id").references(() => promptVersions.id, { onDelete: "set null" }),
-  model: text("model").notNull(),
-  tokensUsed: integer("tokens_used").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => {
-  return {
-    userIdIdx: index("idx_usage_logs_user_id").on(table.userId),
-    createdAtIdx: index("idx_usage_logs_created_at").on(table.createdAt),
-  };
-});
-
-
 // Migrations tracking table
 export const migrations = pgTable("_migrations", {
   id: serial("id").primaryKey(),
@@ -93,7 +77,6 @@ export const migrations = pgTable("_migrations", {
 export const usersRelations = relations(users, ({ many }) => {
   return {
     prompts: many(prompts),
-    usageLogs: many(usageLogs),
   };
 });
 
@@ -107,25 +90,11 @@ export const promptsRelations = relations(prompts, ({ one, many }) => {
   };
 });
 
-export const promptVersionsRelations = relations(promptVersions, ({ one, many }) => {
+export const promptVersionsRelations = relations(promptVersions, ({ one }) => {
   return {
     prompt: one(prompts, {
       fields: [promptVersions.promptId],
       references: [prompts.id],
-    }),
-    usageLogs: many(usageLogs),
-  };
-});
-
-export const usageLogsRelations = relations(usageLogs, ({ one }) => {
-  return {
-    user: one(users, {
-      fields: [usageLogs.userId],
-      references: [users.id],
-    }),
-    promptVersion: one(promptVersions, {
-      fields: [usageLogs.promptVersionId],
-      references: [promptVersions.id],
     }),
   };
 });
@@ -140,7 +109,5 @@ export type PromptVersion = InferSelectModel<typeof promptVersions>;
 export type NewPromptVersion = InferInsertModel<typeof promptVersions>;
 export type Template = InferSelectModel<typeof templates>;
 export type NewTemplate = InferInsertModel<typeof templates>;
-export type UsageLog = InferSelectModel<typeof usageLogs>;
-export type NewUsageLog = InferInsertModel<typeof usageLogs>;
 export type Migration = InferSelectModel<typeof migrations>;
 export type NewMigration = InferInsertModel<typeof migrations>;

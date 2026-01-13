@@ -1,123 +1,47 @@
 /**
- * AI Client
+ * AI Client using Vercel AI SDK
  * 
- * Unified interface for interacting with different LLM providers
+ * All API calls go through Vercel AI Gateway
+ * The SDK automatically uses the gateway when deployed on Vercel
  */
 
-import type { Provider, ChatMessage, ChatCompletionOptions, ChatCompletionResponse, ProviderClient } from "./providers/types";
-import { OpenAIProvider } from "./providers/openai";
-import { AnthropicProvider } from "./providers/anthropic";
-import { GoogleProvider } from "./providers/google";
-import { getModelInfo, type ModelId } from "./models";
+import { streamText } from "ai";
+import type { ModelId } from "./models/types";
 
-export interface AIClientConfig {
-  provider: Provider;
-  model?: ModelId; // Override default model
+/**
+ * Stream text completion using Vercel AI SDK
+ */
+export async function streamTextCompletion(
+  prompt: string,
+  modelId: ModelId = "openai/gpt-4o-mini",
+  options?: {
+    system?: string;
+    temperature?: number;
+    maxTokens?: number;
+  }
+) {
+  return streamText({
+    model: modelId,
+    system: options?.system,
+    prompt,
+    temperature: options?.temperature ?? 0.7,
+    ...(options?.maxTokens && { maxTokens: options.maxTokens }),
+  });
 }
 
-export class AIClient {
-  private providers: Map<Provider, ProviderClient> = new Map();
-
-  constructor() {
-    // Initialize providers with default API keys from environment variables
-    if (process.env.OPENAI_API_KEY) {
-      this.providers.set("openai", new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY }));
-    }
-    if (process.env.ANTHROPIC_API_KEY) {
-      this.providers.set("anthropic", new AnthropicProvider({ apiKey: process.env.ANTHROPIC_API_KEY }));
-    }
-    if (process.env.GOOGLE_API_KEY) {
-      this.providers.set("google", new GoogleProvider({ apiKey: process.env.GOOGLE_API_KEY }));
-    }
+/**
+ * Generate text completion (non-streaming)
+ */
+export async function generateText(
+  prompt: string,
+  modelId: ModelId = "openai/gpt-4o-mini",
+  options?: {
+    system?: string;
+    temperature?: number;
+    maxTokens?: number;
   }
-
-
-  /**
-   * Get provider client for a given provider
-   */
-  private getProvider(provider: Provider): ProviderClient {
-    const client = this.providers.get(provider);
-    if (!client) {
-      throw new Error(`Provider ${provider} is not configured. Please set the API key.`);
-    }
-    return client;
-  }
-
-  /**
-   * Get provider from model ID
-   */
-  private getProviderFromModel(modelId: string): Provider {
-    const modelInfo = getModelInfo(modelId);
-    if (!modelInfo) {
-      throw new Error(`Unknown model: ${modelId}`);
-    }
-    return modelInfo.provider;
-  }
-
-  /**
-   * Chat completion
-   */
-  async chat(
-    messages: ChatMessage[],
-    config?: AIClientConfig & ChatCompletionOptions
-  ): Promise<ChatCompletionResponse> {
-    let provider: Provider;
-    let model: string | undefined;
-
-    if (config?.model) {
-      // Use model to determine provider
-      const modelInfo = getModelInfo(config.model);
-      if (!modelInfo) {
-        throw new Error(`Unknown model: ${config.model}`);
-      }
-      provider = config.provider || modelInfo.provider;
-      model = config.model;
-    } else if (config?.provider) {
-      provider = config.provider;
-      model = config.model;
-    } else {
-      throw new Error("Either model or provider must be specified");
-    }
-
-    const providerClient = this.getProvider(provider);
-
-    return providerClient.chat(messages, {
-      model,
-      temperature: config?.temperature,
-      maxTokens: config?.maxTokens,
-      stream: config?.stream,
-    });
-  }
-
-  /**
-   * Check if a provider is available
-   */
-  isProviderAvailable(provider: Provider): boolean {
-    return this.providers.has(provider);
-  }
-
-  /**
-   * Get available providers
-   */
-  getAvailableProviders(): Provider[] {
-    return Array.from(this.providers.keys());
-  }
-}
-
-// Singleton instance
-let aiClient: AIClient | null = null;
-
-export function getAIClient(): AIClient {
-  if (!aiClient) {
-    aiClient = new AIClient();
-  }
-  return aiClient;
-}
-
-// Convenience function for quick chat
-export async function chat(
-  messages: ChatMessage[],
-  config?: AIClientConfig & ChatCompletionOptions
-): Promise<ChatCompletionResponse> {
-  return getAIClient().chat(messages, config);
+) {
+  const result = await streamTextCompletion(prompt, modelId, options);
+  const text = await result.text;
+  return text;
 }

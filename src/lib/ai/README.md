@@ -1,100 +1,99 @@
 # AI Library
 
-Unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Google).
+Unified interface for interacting with multiple LLM providers via Vercel AI SDK and Gateway.
 
 ## Structure
 
 ```
 lib/ai/
 ├── prompts/          # System prompts and templates
-├── providers/        # Provider implementations
 ├── models/           # Model definitions
-└── client.ts        # Main AI client
+└── client.ts        # Main AI client using Vercel AI SDK
 ```
 
 ## Usage
 
-### Basic Chat
+### Basic Text Generation
 
 ```typescript
-import { chat } from "@/lib/ai";
+import { generateText } from "@/lib/ai/client";
 
-const response = await chat([
-  { role: "system", content: "You are a helpful assistant." },
-  { role: "user", content: "What is the capital of France?" }
-], {
-  model: "gpt-4o-mini",
-  temperature: 0.7,
-});
+const text = await generateText(
+  "What is the capital of France?",
+  "openai/gpt-4o-mini",
+  {
+    temperature: 0.7,
+  }
+);
 
-console.log(response.content);
-console.log(response.usage?.totalTokens);
+console.log(text);
 ```
 
-### Using the Client Directly
+### Streaming Text
 
 ```typescript
-import { getAIClient } from "@/lib/ai";
+import { streamTextCompletion } from "@/lib/ai/client";
 
-const client = getAIClient();
+const result = await streamTextCompletion(
+  "Explain quantum computing",
+  "openai/gpt-4o-mini",
+  {
+    system: "You are a helpful assistant.",
+    temperature: 0.7,
+  }
+);
 
-const response = await client.chat([
-  { role: "user", content: "Hello!" }
-], {
-  model: "gpt-4o-mini",
-});
+for await (const chunk of result.textStream) {
+  process.stdout.write(chunk);
+}
 ```
-
-**Note:** All API calls use keys from the Vercel AI Gateway. No custom API keys are supported.
 
 ### Evaluation Prompt
 
 ```typescript
-import { evaluationSystemPrompt, evaluationUserPrompt } from "@/lib/ai/prompts";
-import { chat } from "@/lib/ai";
+import { generateText } from "@/lib/ai/client";
+import { evaluationSystemPrompt, buildEvaluationUserPrompt } from "@/lib/ai/prompts/evaluation";
 
-const response = await chat([
-  { role: "system", content: evaluationSystemPrompt },
-  { role: "user", content: evaluationUserPrompt(userPrompt, userIntent, 0) }
-], {
-  model: "gpt-4o-mini",
-  temperature: 0.2,
-});
+const userPrompt = "Extract customer complaints";
+const userIntent = "Get top 3 complaints from support tickets";
+
+const evaluationText = buildEvaluationUserPrompt(userPrompt, userIntent, 0);
+const feedback = await generateText(
+  evaluationText,
+  "openai/gpt-4o-mini",
+  {
+    system: evaluationSystemPrompt,
+    temperature: 0.2,
+  }
+);
 ```
 
 ### Get Available Models
 
 ```typescript
-import { getModelsByProvider, getModelInfo } from "@/lib/ai/models";
+import { getModelsByProvider, getModelInfo, getProviderFromModel } from "@/lib/ai/models";
 
 // Get all OpenAI models
 const openaiModels = getModelsByProvider("openai");
 
 // Get model info
-const modelInfo = getModelInfo("gpt-4o");
+const modelInfo = getModelInfo("openai/gpt-4o");
 console.log(modelInfo?.name); // "GPT-4o"
 console.log(modelInfo?.maxTokens); // 128000
+
+// Extract provider from model ID
+const provider = getProviderFromModel("openai/gpt-4o-mini"); // "openai"
 ```
 
-## Providers
+## Model Format
 
-### OpenAI
+Models use the format: `provider/model-name`
 
-- Models: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo`
-- API Key: `OPENAI_API_KEY`
-- Base URL: `https://api.openai.com/v1`
-
-### Anthropic
-
-- Models: `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`, etc.
-- API Key: `ANTHROPIC_API_KEY`
-- Base URL: `https://api.anthropic.com/v1`
-
-### Google
-
-- Models: `gemini-1.5-pro`, `gemini-1.5-flash`, `gemini-pro`
-- API Key: `GOOGLE_API_KEY`
-- Base URL: `https://generativelanguage.googleapis.com/v1beta`
+Examples:
+- `openai/gpt-4o`
+- `openai/gpt-4o-mini`
+- `anthropic/claude-3-5-sonnet-20241022`
+- `google/gemini-1.5-pro`
 
 ## Configuration
 
@@ -110,27 +109,13 @@ The gateway handles all provider API keys internally.
 ## Error Handling
 
 ```typescript
-import { chat } from "@/lib/ai";
+import { generateText } from "@/lib/ai/client";
 
 try {
-  const response = await chat([...], { model: "gpt-4o-mini" });
+  const text = await generateText("Hello", "openai/gpt-4o-mini");
 } catch (error) {
   if (error instanceof Error) {
     console.error("AI request failed:", error.message);
   }
-}
-```
-
-## Token Usage
-
-All responses include token usage information:
-
-```typescript
-const response = await chat([...], { model: "gpt-4o-mini" });
-
-if (response.usage) {
-  console.log(`Prompt tokens: ${response.usage.promptTokens}`);
-  console.log(`Completion tokens: ${response.usage.completionTokens}`);
-  console.log(`Total tokens: ${response.usage.totalTokens}`);
 }
 ```

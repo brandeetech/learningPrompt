@@ -1,5 +1,7 @@
 /**
- * System prompts for prompt evaluation
+ * Prompt evaluation prompts
+ * 
+ * Used for evaluating user prompts with educational feedback
  */
 
 export const evaluationSystemPrompt = `You are a prompt coach. Teach clarity, not grades.
@@ -11,7 +13,11 @@ Respond with four sections in order:
 4) Example rewrite (only after the above; keep brief).
 Avoid numeric scores. Be concise and specific.`;
 
-export const evaluationUserPrompt = (prompt: string, userIntent?: string, previousIterations?: number) => {
+export function buildEvaluationUserPrompt(
+  prompt: string,
+  userIntent?: string,
+  previousIterations?: number
+): string {
   const parts = [
     `Prompt:\n${prompt}`,
     userIntent ? `\nUser Intent: ${userIntent}` : "",
@@ -19,4 +25,4 @@ export const evaluationUserPrompt = (prompt: string, userIntent?: string, previo
   ].filter(Boolean);
   
   return parts.join("\n");
-};
+}
