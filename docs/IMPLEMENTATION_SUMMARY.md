@@ -45,7 +45,6 @@
   - `prompts.ts` - Prompt and version management
   - `usage.ts` - Usage logging
   - `templates.ts` - Template queries
-  - `provider-keys.ts` - API key management
 - ✅ Created SQL migration file: `src/lib/db/migrations/001_initial_schema.sql`
 
 ## Database Schema
@@ -56,7 +55,6 @@
 3. **prompt_versions** - Version history with output, evaluation scores, and data
 4. **templates** - Curated prompt templates
 5. **usage_logs** - Token usage tracking
-6. **provider_keys** - Encrypted user API keys
 
 ### Key Features:
 - Row Level Security (RLS) policies
@@ -94,7 +92,6 @@
 - `src/lib/db/prompts.ts`
 - `src/lib/db/usage.ts`
 - `src/lib/db/templates.ts`
-- `src/lib/db/provider-keys.ts`
 - `src/lib/evaluationColors.ts`
 - `app/auth/page.tsx`
 - `src/lib/db/migrations/001_initial_schema.sql`

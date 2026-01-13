@@ -41,8 +41,7 @@ Visit http://localhost:3000
 │       │   ├── users.ts    # User queries
 │       │   ├── prompts.ts  # Prompt queries
 │       │   ├── usage.ts    # Usage tracking
-│       │   ├── templates.ts
-│       │   └── provider-keys.ts
+│       │   └── templates.ts
 │       ├── env.ts          # Environment config
 │       ├── promptEvaluator.ts
 │       ├── evaluationColors.ts

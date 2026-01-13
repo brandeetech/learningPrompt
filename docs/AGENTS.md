@@ -60,12 +60,11 @@ This file summarizes the MVP plan and product guardrails from `desc.md` so futur
 - prompt_versions: per-prompt version history.
 - templates: curated prompt patterns.
 - usage_logs: per-run model usage.
-- provider_keys: encrypted per-user API keys.
 
 ## Token + Model Logic
 1. User selects model.
-2. Check tokens or user-provided API key.
-3. Route to provider via AI SDK.
+2. Check tokens.
+3. Route to provider via Vercel AI Gateway (uses gateway API keys).
 4. Record tokens used and deduct.
 
 ## Roadmap Phases

@@ -270,14 +270,8 @@ created_at
 
 ```
 
-### provider_keys
-```
-
-id (uuid, pk)
-user_id (fk)
-provider (openai | anthropic | google)
-api_key_encrypted
-created_at
+### provider_keys (DEPRECATED - No longer used)
+All API calls now use keys from the Vercel AI Gateway. User-provided API keys are not supported.
 
 ```
 

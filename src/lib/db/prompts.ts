@@ -1,11 +1,9 @@
 import { getDb } from "./client";
 import { prompts, promptVersions, type Prompt, type NewPrompt, type PromptVersion, type NewPromptVersion } from "./schema";
-import { flags } from "@/lib/env";
 import { eq, desc } from "drizzle-orm";
 import { createUsageLog } from "./usage";
 
 export async function getPromptById(promptId: string): Promise<Prompt | null> {
-  if (!flags.supabaseEnabled) return null;
   
   const db = getDb();
   if (!db) return null;
@@ -15,7 +13,6 @@ export async function getPromptById(promptId: string): Promise<Prompt | null> {
 }
 
 export async function getPromptsByUserId(userId: string): Promise<Prompt[]> {
-  if (!flags.supabaseEnabled) return [];
   
   const db = getDb();
   if (!db) return [];
@@ -32,9 +29,6 @@ export async function createPrompt(params: {
   title?: string;
   intent?: string;
 }): Promise<{ ok: boolean; prompt?: Prompt; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {
@@ -62,9 +56,6 @@ export async function updatePrompt(
   promptId: string,
   updates: { title?: string; intent?: string }
 ): Promise<{ ok: boolean; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {
@@ -87,7 +78,6 @@ export async function updatePrompt(
 }
 
 export async function getPromptVersions(promptId: string): Promise<PromptVersion[]> {
-  if (!flags.supabaseEnabled) return [];
   
   const db = getDb();
   if (!db) return [];
@@ -100,7 +90,6 @@ export async function getPromptVersions(promptId: string): Promise<PromptVersion
 }
 
 export async function getPromptVersionById(versionId: string): Promise<PromptVersion | null> {
-  if (!flags.supabaseEnabled) return null;
   
   const db = getDb();
   if (!db) return null;
@@ -124,9 +113,6 @@ export async function createPromptVersion(params: {
   evaluationData?: Record<string, any>;
   tokensUsed: number;
 }): Promise<{ ok: boolean; version?: PromptVersion; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {
@@ -178,9 +164,6 @@ export async function upsertPromptWithVersion(params: {
   tokensUsed: number;
   intent?: string;
 }): Promise<{ ok: boolean; prompt?: Prompt; version?: PromptVersion; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {

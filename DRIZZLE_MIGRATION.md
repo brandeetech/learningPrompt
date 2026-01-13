@@ -54,8 +54,9 @@ All tables are now defined in `src/lib/db/schema.ts` using Drizzle:
 - `promptVersions` - Version history
 - `templates` - Prompt templates
 - `usageLogs` - Token usage tracking
-- `providerKeys` - User API keys
 - `migrations` - Migration tracking
+
+**Note:** All API calls use keys from the Vercel AI Gateway. User-provided API keys are not supported.
 
 ## Type Safety
 

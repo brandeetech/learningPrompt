@@ -5,7 +5,6 @@ import { Evaluation, estimateTokens } from "@/lib/promptEvaluator";
 import { stageCopy } from "@/lib/learningPath";
 import { promptTemplates } from "@/lib/templates";
 import Link from "next/link";
-import { flags } from "@/lib/env";
 import { getScoreColor, getScoreBgColor, getScoreLabel } from "@/lib/evaluationColors";
 
 type HistoryItem = {
@@ -201,15 +200,9 @@ export default function PlaygroundPage() {
             <span className="text-xs text-muted">
               Estimated tokens: {estimateTokens(prompt)} · Model: {model}
             </span>
-            {flags.gatewayEnabled ? (
-              <span className="text-xs rounded-full bg-card px-3 py-1 text-ink shadow-sm">
-                Using Vercel AI Gateway
-              </span>
-            ) : (
-              <span className="text-xs text-muted">
-                Gateway not configured; using local heuristic evaluation.
-              </span>
-            )}
+            <span className="text-xs rounded-full bg-card px-3 py-1 text-ink shadow-sm">
+              Using Vercel AI Gateway
+            </span>
           </div>
           <div className="rounded-xl border border-border bg-card-alt p-4 text-sm text-ink">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">

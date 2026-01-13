@@ -77,20 +77,6 @@ export const usageLogs = pgTable("usage_logs", {
   };
 });
 
-// Provider keys table
-export const providerKeys = pgTable("provider_keys", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  provider: text("provider").notNull().$type<Provider>(),
-  apiKeyEncrypted: text("api_key_encrypted").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => {
-  return {
-    userIdIdx: index("idx_provider_keys_user_id").on(table.userId),
-    uniqueUserProvider: unique().on(table.userId, table.provider),
-  };
-});
 
 // Migrations tracking table
 export const migrations = pgTable("_migrations", {
@@ -108,7 +94,6 @@ export const usersRelations = relations(users, ({ many }) => {
   return {
     prompts: many(prompts),
     usageLogs: many(usageLogs),
-    providerKeys: many(providerKeys),
   };
 });
 
@@ -145,14 +130,6 @@ export const usageLogsRelations = relations(usageLogs, ({ one }) => {
   };
 });
 
-export const providerKeysRelations = relations(providerKeys, ({ one }) => {
-  return {
-    user: one(users, {
-      fields: [providerKeys.userId],
-      references: [users.id],
-    }),
-  };
-});
 
 // Type exports for TypeScript
 export type User = InferSelectModel<typeof users>;
@@ -165,7 +142,5 @@ export type Template = InferSelectModel<typeof templates>;
 export type NewTemplate = InferInsertModel<typeof templates>;
 export type UsageLog = InferSelectModel<typeof usageLogs>;
 export type NewUsageLog = InferInsertModel<typeof usageLogs>;
-export type ProviderKey = InferSelectModel<typeof providerKeys>;
-export type NewProviderKey = InferInsertModel<typeof providerKeys>;
 export type Migration = InferSelectModel<typeof migrations>;
 export type NewMigration = InferInsertModel<typeof migrations>;

@@ -4,7 +4,6 @@
  * Unified interface for interacting with different LLM providers
  */
 
-import { env } from "@/lib/env";
 import type { Provider, ChatMessage, ChatCompletionOptions, ChatCompletionResponse, ProviderClient } from "./providers/types";
 import { OpenAIProvider } from "./providers/openai";
 import { AnthropicProvider } from "./providers/anthropic";
@@ -13,7 +12,6 @@ import { getModelInfo, type ModelId } from "./models";
 
 export interface AIClientConfig {
   provider: Provider;
-  apiKey?: string; // Override default API key
   model?: ModelId; // Override default model
 }
 
@@ -21,34 +19,18 @@ export class AIClient {
   private providers: Map<Provider, ProviderClient> = new Map();
 
   constructor() {
-    // Initialize providers with default API keys from env
-    if (env.openaiKey) {
-      this.providers.set("openai", new OpenAIProvider({ apiKey: env.openaiKey }));
+    // Initialize providers with default API keys from environment variables
+    if (process.env.OPENAI_API_KEY) {
+      this.providers.set("openai", new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY }));
     }
-    if (env.anthropicKey) {
-      this.providers.set("anthropic", new AnthropicProvider({ apiKey: env.anthropicKey }));
+    if (process.env.ANTHROPIC_API_KEY) {
+      this.providers.set("anthropic", new AnthropicProvider({ apiKey: process.env.ANTHROPIC_API_KEY }));
     }
-    if (env.googleKey) {
-      this.providers.set("google", new GoogleProvider({ apiKey: env.googleKey }));
+    if (process.env.GOOGLE_API_KEY) {
+      this.providers.set("google", new GoogleProvider({ apiKey: process.env.GOOGLE_API_KEY }));
     }
   }
 
-  /**
-   * Add or update a provider with custom API key
-   */
-  setProvider(provider: Provider, apiKey: string, config?: { baseUrl?: string; defaultModel?: string }) {
-    switch (provider) {
-      case "openai":
-        this.providers.set(provider, new OpenAIProvider({ apiKey, ...config }));
-        break;
-      case "anthropic":
-        this.providers.set(provider, new AnthropicProvider({ apiKey, ...config }));
-        break;
-      case "google":
-        this.providers.set(provider, new GoogleProvider({ apiKey, ...config }));
-        break;
-    }
-  }
 
   /**
    * Get provider client for a given provider

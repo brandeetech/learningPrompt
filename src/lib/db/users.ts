@@ -1,10 +1,8 @@
 import { getDb } from "./client";
 import { users, type User, type NewUser, type UserRole } from "./schema";
-import { flags } from "@/lib/env";
 import { eq } from "drizzle-orm";
 
 export async function getUserById(userId: string): Promise<User | null> {
-  if (!flags.supabaseEnabled) return null;
   
   const db = getDb();
   if (!db) return null;
@@ -14,7 +12,6 @@ export async function getUserById(userId: string): Promise<User | null> {
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
-  if (!flags.supabaseEnabled) return null;
   
   const db = getDb();
   if (!db) return null;
@@ -29,9 +26,6 @@ export async function createUser(params: {
   role?: UserRole;
   tokensRemaining?: number;
 }): Promise<{ ok: boolean; user?: User; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {
@@ -60,9 +54,6 @@ export async function updateUserTokens(
   userId: string,
   tokensRemaining: number
 ): Promise<{ ok: boolean; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {
@@ -88,9 +79,6 @@ export async function updateUserRole(
   userId: string,
   role: UserRole
 ): Promise<{ ok: boolean; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {

@@ -38,9 +38,6 @@ import { getAIClient } from "@/lib/ai";
 
 const client = getAIClient();
 
-// Add custom API key
-client.setProvider("openai", "your-api-key");
-
 const response = await client.chat([
   { role: "user", content: "Hello!" }
 ], {
@@ -48,22 +45,7 @@ const response = await client.chat([
 });
 ```
 
-### Using Custom Provider API Keys
-
-```typescript
-import { getAIClient } from "@/lib/ai";
-
-const client = getAIClient();
-
-// Use user's own API key
-client.setProvider("anthropic", userApiKey);
-
-const response = await client.chat([
-  { role: "user", content: "Hello!" }
-], {
-  model: "claude-3-5-sonnet-20241022",
-});
-```
+**Note:** All API calls use keys from the Vercel AI Gateway. No custom API keys are supported.
 
 ### Evaluation Prompt
 
@@ -116,13 +98,14 @@ console.log(modelInfo?.maxTokens); // 128000
 
 ## Configuration
 
-Set environment variables:
+All API calls are routed through the Vercel AI Gateway. Set environment variables:
 
 ```bash
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_API_KEY=...
+VERCEL_AI_GATEWAY_URL=https://...
+VERCEL_AI_GATEWAY_AUTH=Bearer ...
 ```
+
+The gateway handles all provider API keys internally.
 
 ## Error Handling
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { evaluatePrompt } from "@/lib/promptEvaluator";
-import { flags, env } from "@/lib/env";
+
+const isGatewayEnabled = () => !!process.env.VERCEL_AI_GATEWAY_URL;
 
 const rubricSystem = `
 You are a prompt coach. Teach clarity, not grades.
@@ -16,17 +17,17 @@ Avoid numeric scores. Be concise and specific.
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { prompt, previousIterations = 0, userIntent, userApiKey } = body || {};
+    const { prompt, previousIterations = 0, userIntent } = body || {};
     if (!prompt) {
       return NextResponse.json({ ok: false, message: "prompt required" }, { status: 400 });
     }
 
     const localEvaluation = evaluatePrompt(prompt, { previousIterations, userIntent });
 
-    const gatewayUrl = env.vercelAIGatewayUrl;
-    const auth = env.vercelAIGatewayAuth || userApiKey;
+    const gatewayUrl = process.env.VERCEL_AI_GATEWAY_URL;
+    const auth = process.env.VERCEL_AI_GATEWAY_AUTH;
 
-    if (flags.gatewayEnabled && gatewayUrl && auth) {
+    if (isGatewayEnabled() && gatewayUrl && auth) {
       try {
         const completion = await fetch(gatewayUrl, {
           method: "POST",

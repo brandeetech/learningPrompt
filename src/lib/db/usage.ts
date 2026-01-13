@@ -1,6 +1,5 @@
 import { getDb } from "./client";
 import { usageLogs, type UsageLog, type NewUsageLog } from "./schema";
-import { flags } from "@/lib/env";
 import { eq, desc, sum } from "drizzle-orm";
 
 export async function createUsageLog(params: {
@@ -9,9 +8,6 @@ export async function createUsageLog(params: {
   model: string;
   tokensUsed: number;
 }): Promise<{ ok: boolean; message?: string }> {
-  if (!flags.supabaseEnabled) {
-    return { ok: false, message: "Database disabled" };
-  }
 
   const db = getDb();
   if (!db) {
@@ -57,7 +53,6 @@ export async function getUsageLogsByUserId(
   userId: string,
   limit = 50
 ): Promise<UsageLog[]> {
-  if (!flags.supabaseEnabled) return [];
 
   const db = getDb();
   if (!db) return [];
@@ -71,7 +66,6 @@ export async function getUsageLogsByUserId(
 }
 
 export async function getTotalTokensUsed(userId: string): Promise<number> {
-  if (!flags.supabaseEnabled) return 0;
 
   const db = getDb();
   if (!db) return 0;

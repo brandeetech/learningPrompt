@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { upsertPromptWithVersion } from "@/lib/db/prompts";
 import { insertUsage } from "@/lib/db/usage";
-import { flags } from "@/lib/env";
 
 export async function POST(request: Request) {
   try {
@@ -12,10 +11,6 @@ export async function POST(request: Request) {
         { ok: false, message: "prompt, model, tokensUsed required" },
         { status: 400 }
       );
-    }
-
-    if (!flags.supabaseEnabled) {
-      return NextResponse.json({ ok: true, skipped: "supabase_disabled" });
     }
 
     const result = await upsertPromptWithVersion({
@@ -52,9 +47,6 @@ export async function PUT(request: Request) {
         { ok: false, message: "model and tokensUsed required" },
         { status: 400 }
       );
-    }
-    if (!flags.supabaseEnabled) {
-      return NextResponse.json({ ok: true, skipped: "supabase_disabled" });
     }
     const result = await insertUsage({ model, tokensUsed, userId });
     if (!result.ok) {
