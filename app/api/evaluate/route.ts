@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { generateText } from "@/lib/ai/client";
 import { evaluationSystemPrompt, buildEvaluationUserPrompt } from "@/lib/ai/prompts/evaluation";
 import { evaluatePrompt } from "@/lib/promptEvaluator";
 
@@ -37,35 +36,29 @@ export async function POST(request: Request) {
       temperature: 0.2,
     });
 
-    const content = await generateText(
-      userPrompt,
-      "openai/gpt-4o-mini",
-      {
-        system: evaluationSystemPrompt,
-        temperature: 0.2,
-      }
-    );
+    // Use evaluatePrompt which calls LLM via generateObject
+    const evaluation = await evaluatePrompt(prompt, {
+      previousIterations,
+      userIntent,
+      modelId: "openai/gpt-4o-mini",
+    });
 
     const llmDuration = performance.now() - llmStartTime;
     const totalDuration = performance.now() - startTime;
-
-    // Enrich with scores from local evaluator
-    const localEvaluation = evaluatePrompt(prompt, { previousIterations, userIntent });
 
     console.log("[Evaluate API] LLM evaluation completed", {
       requestId,
       llmDuration: `${llmDuration.toFixed(2)}ms`,
       totalDuration: `${totalDuration.toFixed(2)}ms`,
-      contentLength: content.length,
-      contentPreview: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
-      overallScore: localEvaluation.score?.overall,
+      overallScore: evaluation.score?.overall,
+      stage: evaluation.stage,
+      improvementsCount: evaluation.improvements.length,
     });
 
     return NextResponse.json(
       {
         ok: true,
-        content,
-        evaluation: localEvaluation,
+        evaluation,
       },
       { status: 200 }
     );

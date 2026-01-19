@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verify } from "jsonwebtoken";
-import { getPromptsWithLatestVersion } from "@/lib/db/prompts";
+import { getPromptsWithLatestVersion, getPromptVersions, getPromptById } from "@/lib/db/prompts";
 import { getUserById } from "@/lib/db/users";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 /**
  * GET /api/prompts - Get all prompts for the current user
+ * GET /api/prompts?promptId=<id> - Get all versions of a specific prompt
  */
 export async function GET(request: Request) {
   const requestId = `prompts-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const { searchParams } = new URL(request.url);
+  const promptId = searchParams.get("promptId");
 
   try {
     // Check session cookie on server side
@@ -47,6 +50,28 @@ export async function GET(request: Request) {
         { ok: false, message: "Unauthorized" },
         { status: 401 }
       );
+    }
+
+    // If promptId is provided, fetch all versions of that prompt
+    if (promptId) {
+      const prompt = await getPromptById(promptId);
+      
+      if (!prompt || prompt.userId !== user.id) {
+        return NextResponse.json(
+          { ok: false, message: "Prompt not found" },
+          { status: 404 }
+        );
+      }
+
+      const versions = await getPromptVersions(promptId);
+      
+      return NextResponse.json({ 
+        ok: true, 
+        prompt: {
+          ...prompt,
+          versions
+        }
+      });
     }
 
     console.log("[Prompts API] Fetching prompts for user", {
