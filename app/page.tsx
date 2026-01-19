@@ -31,6 +31,7 @@ const pillars = [
 export default function Home() {
   return (
     <div className="space-y-12 pb-16">
+      {/* Hero Section */}
       <section className="grid items-center gap-10 md:grid-cols-[1.2fr_1fr] pt-8">
         <div className="space-y-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
@@ -57,25 +58,6 @@ export default function Home() {
             >
               View templates
             </Link>
-            <div className="flex items-center gap-2 rounded-full bg-card px-4 py-2 text-xs text-muted shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-secondary" />
-              Learn by doing · Get instant feedback
-            </div>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {pillars.map((pillar) => (
-              <div key={pillar.title} className="card p-4">
-                <p className="text-sm font-semibold text-ink">{pillar.title}</p>
-                <ul className="mt-2 space-y-2 text-sm text-muted">
-                  {pillar.bullets.map((item) => (
-                    <li key={item} className="flex gap-2">
-                      <span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-brand" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
           </div>
         </div>
         <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-br from-brand/10 via-secondary/5 to-accent/10 p-8 shadow-lg">
@@ -112,6 +94,34 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Key Features Section */}
+      <section className="space-y-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted">
+            Why AskRight
+          </p>
+          <h2 className="text-2xl font-semibold text-ink">
+            Educational-first approach
+          </h2>
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-3">
+          {pillars.map((pillar) => (
+            <div key={pillar.title} className="card p-5">
+              <h3 className="text-base font-semibold text-ink mb-3">{pillar.title}</h3>
+              <ul className="space-y-2.5 text-sm text-muted">
+                {pillar.bullets.map((item) => (
+                  <li key={item} className="flex gap-2.5">
+                    <span className="mt-[6px] h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="space-y-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted">
@@ -128,15 +138,12 @@ export default function Home() {
         <div className="grid gap-6 md:grid-cols-3">
           {/* Step 1 */}
           <div className="card p-6">
-            <div className="mb-4 relative h-48 w-full rounded-xl bg-gradient-to-br from-brand/20 to-brand/5 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-muted">
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-2">Step 1 Image</p>
-                  <p className="text-[10px] text-muted/70 max-w-xs">
-                    Image prompt: "A clean, modern interface showing a text editor with a prompt being written. The style should be minimalist with soft blue tones. Show the prompt text clearly visible, with a model selector visible in the UI. Convey a sense of clarity and structure."
-                  </p>
-                </div>
-              </div>
+            <div className="mb-4 relative h-48 w-full rounded-xl overflow-hidden">
+              <img 
+                src="/step-1-write-prompt.png" 
+                alt="Text editor with prompt being written" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="flex items-center gap-2 mb-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white">1</span>
@@ -149,15 +156,12 @@ export default function Home() {
 
           {/* Step 2 */}
           <div className="card p-6">
-            <div className="mb-4 relative h-48 w-full rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/5 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-muted">
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-2">Step 2 Image</p>
-                  <p className="text-[10px] text-muted/70 max-w-xs">
-                    Image prompt: "An educational feedback interface showing structured feedback cards. Display 'What happened', 'Why it happened', and 'How to improve' sections. Use green and blue color accents. The design should feel helpful and educational, not judgmental."
-                  </p>
-                </div>
-              </div>
+            <div className="mb-4 relative h-48 w-full rounded-xl overflow-hidden">
+              <img 
+                src="/step-2-feedback.png" 
+                alt="Educational feedback interface with structured feedback cards" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="flex items-center gap-2 mb-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-white">2</span>
@@ -170,15 +174,12 @@ export default function Home() {
 
           {/* Step 3 */}
           <div className="card p-6">
-            <div className="mb-4 relative h-48 w-full rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-muted">
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-2">Step 3 Image</p>
-                  <p className="text-[10px] text-muted/70 max-w-xs">
-                    Image prompt: "A version history interface showing multiple iterations of a prompt with improvement arrows. Show progression from initial to refined prompt. Use warm orange/amber tones. Convey growth and learning through iteration."
-                  </p>
-                </div>
-              </div>
+            <div className="mb-4 relative h-48 w-full rounded-xl overflow-hidden">
+              <img 
+                src="/step-3-iterate.png" 
+                alt="Version history interface showing prompt iterations and improvements" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="flex items-center gap-2 mb-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">3</span>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { upsertPromptWithVersion } from "@/lib/db/prompts";
+import { generatePromptName } from "@/lib/ai/prompts/nameGeneration";
 
 export async function POST(request: Request) {
   const requestId = `runs-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -58,10 +59,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Generate a camelCase name for the prompt if title is not provided
+    let promptTitle = title;
+    if (!promptTitle) {
+      try {
+        promptTitle = await generatePromptName(fullPrompt, intent);
+        console.log("[Runs API] Generated prompt name", {
+          requestId,
+          generatedName: promptTitle,
+        });
+      } catch (error) {
+        console.error("[Runs API] Failed to generate name, using fallback", {
+          requestId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        promptTitle = `prompt${Date.now().toString(36)}`;
+      }
+    }
+
     const dbStartTime = performance.now();
     const result = await upsertPromptWithVersion({
       userId,
-      title,
+      title: promptTitle,
       content: fullPrompt,
       systemPrompt,
       userMessage,

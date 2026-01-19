@@ -1,116 +1,92 @@
--- Migration: Insert default templates
--- This migration inserts all default prompt templates into the templates table
-
--- Insert templates (using fixed UUIDs for consistency)
+-- Migration: Insert default templates (revised)
 INSERT INTO templates (id, title, category, intent, content, why_it_works) VALUES
--- Summary templates
-('550e8400-e29b-41d4-a716-446655440001', 'Tidy Summary', 'summary', 
- 'Summarize with structure and transparency on unknowns.',
- 'Summarize the following text for a business audience in 4 bullets + 1 risk. Include dates/regions if present; if unknown, say ''unknown''. Keep sentences under 18 words.
-
-Text:
-{{insert text}}',
- 'Specifies audience, length, format, and how to handle unknowns—reduces drift and verbosity.'),
-
-('550e8400-e29b-41d4-a716-446655440002', 'Executive Brief', 'summary',
- 'Create a concise executive summary with key metrics.',
- 'Create an executive summary of the following report for C-level executives. Include: 1) Main finding (one sentence), 2) Three key metrics with context, 3) One critical risk or opportunity, 4) Recommended action. Keep total length under 150 words.
-
-Report:
-{{insert report}}',
- 'Structures output for decision-makers with clear metrics and actions, preventing information overload.'),
-
--- Analysis templates
-('550e8400-e29b-41d4-a716-446655440003', 'Explain a Decision', 'analysis',
- 'Analyze a decision with context and counterpoints.',
- 'You are an analyst. Explain the decision on {{topic}} for {{audience}}. Provide: 1) 3 key factors, 2) trade-offs, 3) 1 counterpoint, 4) what data is missing. Use bullets.',
- 'Breaks analysis into repeatable sections and asks for missing data, improving clarity and trust.'),
-
-('550e8400-e29b-41d4-a716-446655440004', 'Root Cause Analysis', 'analysis',
- 'Identify root causes with evidence and recommendations.',
- 'Analyze the following problem and identify root causes. For each cause: 1) State the cause, 2) Provide evidence from the text, 3) Rate confidence (high/medium/low), 4) Suggest one preventive measure. If evidence is insufficient, state what data is needed.
-
-Problem:
-{{insert problem description}}',
- 'Forces evidence-based analysis and surfaces data gaps, reducing speculation.'),
-
--- Compare templates
-('550e8400-e29b-41d4-a716-446655440005', 'Compare Options', 'compare',
- 'Compare two options with constraints.',
- 'Compare {{option A}} vs {{option B}} for {{audience}}. Create a 4-row table: criteria, why it matters, option A note, option B note. End with a short recommendation and 1 risk.',
- 'Forces a shared schema and keeps outputs scoped; makes trade-offs explicit instead of generic pros/cons.'),
-
-('550e8400-e29b-41d4-a716-446655440006', 'Feature Comparison', 'compare',
- 'Compare features across multiple options systematically.',
- 'Compare {{option A}}, {{option B}}, and {{option C}} for {{use case}}. Create a comparison table with columns: Feature, Option A, Option B, Option C, Winner. Include only features relevant to {{use case}}. End with a recommendation based on {{priority}} (cost/performance/ease-of-use).
-
-Use case: {{insert use case}}
-Priority: {{insert priority}}',
- 'Structures comparison with clear criteria and forces prioritization, making decisions easier.'),
-
--- Extract templates
-('550e8400-e29b-41d4-a716-446655440007', 'Structured Extraction', 'extract',
- 'Extract structured data safely.',
- 'Extract the required fields from the text. Respond in JSON only with keys: title, date, audience, actions[]. If a field is missing, set its value to null and note it in unknowns[].
-
-Text:
-{{insert text}}',
- 'Defines schema, handling of unknowns, and discourages hallucination with explicit nulls.'),
-
-('550e8400-e29b-41d4-a716-446655440008', 'Contact Information Extraction', 'extract',
- 'Extract contact details with validation flags.',
- 'Extract contact information from the following text. Return JSON with structure: {name: string | null, email: string | null, phone: string | null, company: string | null, validation: {emailValid: boolean, phoneValid: boolean}}. If any field is missing or unclear, set to null. Mark validation flags as false if format is suspicious.
-
-Text:
-{{insert text}}',
- 'Provides structured extraction with validation, reducing errors in data processing.'),
-
--- Critique templates
-('550e8400-e29b-41d4-a716-446655440009', 'Critique and Improve', 'critique',
- 'Critique content and propose concise fixes.',
- 'Critique the following draft for clarity, completeness, and tone for {{audience}}. Return: 1) 3 issues, 2) 3 fixes, 3) a concise example rewrite (<=120 words). If context is missing, list the missing items first.
-
-Draft:
-{{insert draft}}',
- 'Separates critique from rewrite and caps length; keeps focus on the audience and missing context.'),
-
-('550e8400-e29b-41d4-a716-446655440010', 'Code Review', 'critique',
- 'Review code with specific feedback and examples.',
- 'Review the following code for {{language}} best practices. Provide: 1) Three specific issues with line references, 2) Why each issue matters, 3) Example fix for the most critical issue (5-10 lines). Focus on readability, maintainability, and potential bugs.
-
-Code:
-{{insert code}}',
- 'Structures code review with actionable feedback and examples, making improvements clear.'),
-
--- Writing templates
-('550e8400-e29b-41d4-a716-446655440011', 'Structured Writing Plan', 'writing',
- 'Create a plan before writing.',
- 'Before writing, create a plan for {{piece type}} for {{audience}}. Provide: 1) goal, 2) reader questions, 3) outline with bullet points, 4) voice/tone guide, 5) sources to verify. Keep it under 160 words.',
- 'Front-loads structure and verification before drafting, reducing rewrites and hallucination.'),
-
-('550e8400-e29b-41d4-a716-446655440012', 'Email Draft', 'writing',
- 'Write a professional email with clear structure.',
- 'Draft a {{tone}} email to {{recipient}} about {{topic}}. Include: 1) Clear subject line, 2) Opening context (1-2 sentences), 3) Main message (2-3 bullets), 4) Call to action, 5) Professional closing. Keep total length under 150 words.
-
-Tone: {{insert tone (formal/casual/urgent)}}
-Recipient: {{insert recipient}}
-Topic: {{insert topic}}',
- 'Structures email communication with clear sections, improving clarity and response rates.'),
-
-('550e8400-e29b-41d4-a716-446655440013', 'Blog Post Outline', 'writing',
- 'Create a structured blog post outline.',
- 'Create an outline for a blog post titled "{{title}}" for {{audience}}. Include: 1) Hook (first paragraph idea), 2) Three main sections with 2-3 sub-points each, 3) Conclusion idea, 4) Call-to-action. Keep outline concise (under 200 words).
-
-Title: {{insert title}}
-Audience: {{insert audience}}',
- 'Structures blog content before writing, ensuring logical flow and completeness.'),
-
-('550e8400-e29b-41d4-a716-446655440014', 'Technical Documentation', 'writing',
- 'Write clear technical documentation.',
- 'Write technical documentation for {{feature}} for {{audience}} (beginner/intermediate/advanced). Include: 1) Overview (what it does), 2) Prerequisites, 3) Step-by-step instructions, 4) Common issues and solutions, 5) Examples. Use clear headings and code blocks where needed.
-
-Feature: {{insert feature}}
-Audience: {{insert audience}}',
- 'Structures technical docs with clear sections, improving usability and reducing support questions.')
-
-ON CONFLICT (id) DO NOTHING;
+('550e8400-e29b-41d4-a716-446655440001', 'Concise Summary', 'summary', 'brief',
+ 'Summarize the following text for a business audience in 4 bullet points, plus 1 bullet for any key risk. Include any dates or locations mentioned, or ''unknown'' if none. Limit each bullet to 20 words or less.\n\nText:\n{{insert text}}',
+ 'Emphasizes audience, format, and handling of missing info; ensures concise output.'),
+('550e8400-e29b-41d4-a716-446655440002', 'Executive Summary', 'summary', 'brief',
+ 'Write a concise executive summary for C-level executives based on the report below. Include: 1) main finding (one sentence), 2) three key metrics (with context), 3) one critical risk or opportunity, 4) one recommended action. Keep it under 150 words.\n\nReport:\n{{insert report}}',
+ 'Focuses on key insights and actions for executives with a word limit for brevity.'),
+('550e8400-e29b-41d4-a716-446655440003', 'Decision Rationale', 'analysis', 'insight',
+ 'Explain why the decision on {{topic}} was made, for {{audience}}. Include: 1) three key factors, 2) two trade-offs, 3) one counterpoint, 4) missing data. Present answers as bullet points.',
+ 'Guides reasoning with key factors, trade-offs, and data gaps; clarifies decision logic.'),
+('550e8400-e29b-41d4-a716-446655440004', 'Root Cause Diagnosis', 'analysis', 'diagnosis',
+ 'Analyze the following problem to identify root causes. For each cause, include: 1) the cause, 2) evidence from the text, 3) confidence (high/medium/low), 4) one preventive measure. If evidence is lacking, note what data is needed.\n\nProblem:\n{{insert problem description}}',
+ 'Promotes evidence-based analysis and highlights missing data, reducing speculation.'),
+('550e8400-e29b-41d4-a716-446655440005', 'Compare Options', 'compare', 'evaluation',
+ 'Compare {{option A}} vs {{option B}} for {{audience}}. List each relevant criterion and why it matters. For each criterion, note how {{option A}} and {{option B}} perform. End with a brief recommendation and one risk.',
+ 'Encourages structured side-by-side comparison and a clear recommendation.'),
+('550e8400-e29b-41d4-a716-446655440006', 'Feature Comparison', 'compare', 'evaluation',
+ 'Compare {{option A}}, {{option B}}, and {{option C}} for {{use case}}. List features relevant to this use case, and for each feature note how each option performs. Indicate which option is best per feature. End with a recommendation based on {{priority}} (cost, performance, ease-of-use).\n\nUse case: {{insert use case}}\nPriority: {{insert priority}}',
+ 'Structures multi-option comparison with prioritized criteria to simplify decisions.'),
+('550e8400-e29b-41d4-a716-446655440007', 'Structured Extraction', 'extract', 'extract',
+ 'Extract the required fields from the text. Return JSON with keys: title, date, audience, and actions. Use null for any missing value, and list missing field names in an "unknowns" array.\n\nText:\n{{insert text}}',
+ 'Defines a clear output schema and handles missing data explicitly to avoid errors.'),
+('550e8400-e29b-41d4-a716-446655440008', 'Contact Info Extraction', 'extract', 'extract',
+ 'Extract contact information (name, email, phone, company) from the text. Output JSON with keys "name", "email", "phone", "company" (strings or null) and "validation": {"emailValid": boolean, "phoneValid": boolean}. Use null if missing and set validation flags false for invalid formats.\n\nText:\n{{insert text}}',
+ 'Standardizes contact info output with validation flags to improve data accuracy.'),
+('550e8400-e29b-41d4-a716-446655440009', 'Critique and Improve', 'critique', 'review',
+ 'Critique the draft below for clarity, completeness, and tone for {{audience}}. Provide: 1) Three issues, 2) Three suggestions for improvement, 3) one example rewrite (<= 120 words). If important context is missing, list those items first.\n\nDraft:\n{{insert draft}}',
+ 'Separates critique from solutions, highlighting issues and fixes while keeping the rewrite concise.'),
+('550e8400-e29b-41d4-a716-446655440010', 'Code Review', 'critique', 'review',
+ 'Review the following {{language}} code for best practices. Provide: 1) Three issues with line references, 2) why each is a problem, 3) an example fix (5-10 lines) for the most critical issue. Focus on readability, maintainability, and potential bugs.\n\nCode:\n{{insert code}}',
+ 'Structures feedback with examples and clear issues, improving code quality and clarity.'),
+('550e8400-e29b-41d4-a716-446655440011', 'Content Plan', 'writing', 'content',
+ 'Create a plan for the {{piece type}} intended for {{audience}}. Include: 1) the goal, 2) key questions the reader has, 3) an outline (bullet points), 4) voice/tone guidelines, 5) sources for facts. Keep under 160 words.',
+ 'Enforces upfront planning with clear goals and sources to reduce later revisions.'),
+('550e8400-e29b-41d4-a716-446655440012', 'Email Draft', 'writing', 'content',
+ 'Draft a {{tone}} email to {{recipient}} about {{topic}}. Include: 1) a clear subject line, 2) a 1-2 sentence opening, 3) the main message (2-3 bullet points), 4) a call to action, 5) a professional closing. Keep it under 150 words.',
+ 'Provides a clear email structure to improve clarity and response rates.'),
+('550e8400-e29b-41d4-a716-446655440013', 'Blog Post Outline', 'writing', 'content',
+ 'Outline a blog post titled "{{title}}" for {{audience}}. Include: 1) a hook idea, 2) three main sections (2-3 bullet points each), 3) a conclusion idea, 4) a call-to-action. Keep the outline under 200 words.',
+ 'Builds structure before writing to ensure a logical flow and complete content.'),
+('550e8400-e29b-41d4-a716-446655440014', 'Technical Documentation', 'writing', 'content',
+ 'Write technical documentation for {{feature}} for {{audience}} (beginner, intermediate, or advanced). Include: 1) an overview of what it does, 2) prerequisites, 3) step-by-step instructions (with code examples if needed), 4) common issues and solutions. Use clear headings and code blocks.',
+ 'Organizes documentation clearly with practical details and examples for usability.'),
+('550e8400-e29b-41d4-a716-446655440015', 'Key Takeaways', 'summary', 'brief',
+ 'Summarize the main points of the following text in bullet points for a general audience. Provide 5 key takeaways. Note ''unknown'' if information is missing.\n\nText:\n{{insert text}}',
+ 'Focuses on distilling essential information clearly, highlighting missing data.'),
+('550e8400-e29b-41d4-a716-446655440016', 'Meeting Summary', 'summary', 'brief',
+ 'Summarize the following meeting notes into key bullet points for stakeholders. Include decisions made, action items, and any open questions. Keep it under 150 words.\n\nNotes:\n{{insert notes}}',
+ 'Provides a concise overview of meeting outcomes and follow-up items.'),
+('550e8400-e29b-41d4-a716-446655440017', 'SWOT Analysis', 'analysis', 'analysis',
+ 'Perform a SWOT analysis for {{topic}}. List 3 bullet points under each heading: Strengths, Weaknesses, Opportunities, Threats.',
+ 'Structures a strategic analysis into clear categories of strengths, weaknesses, etc.'),
+('550e8400-e29b-41d4-a716-446655440018', 'Cost-Benefit Analysis', 'analysis', 'analysis',
+ 'Perform a cost-benefit analysis for {{project}}. Provide at least three bullet points for costs and three for benefits, with brief explanations. End with a recommendation.',
+ 'Highlights major costs and benefits to inform decision-making with a clear recommendation.'),
+('550e8400-e29b-41d4-a716-446655440019', 'Pros and Cons Comparison', 'compare', 'evaluation',
+ 'Compare {{option A}} and {{option B}}. For each option, list 3 pros and 3 cons. Provide a brief recommendation at the end.',
+ 'Simplifies comparison into advantages/disadvantages for quick evaluation.'),
+('550e8400-e29b-41d4-a716-446655440020', 'Decision Matrix', 'compare', 'evaluation',
+ 'Compare {{option A}}, {{option B}}, and {{option C}} by scoring them on several criteria (e.g., cost, quality, risk). For each criterion, assign a score to each option. Present this in a clear table or list. Conclude by naming the best option and why.',
+ 'Provides a clear, quantitative basis for choosing between multiple options.'),
+('550e8400-e29b-41d4-a716-446655440021', 'Named Entity Extraction', 'extract', 'extract',
+ 'Extract named entities from the text below. Return JSON: {"people": [...], "organizations": [...], "locations": [...]}. List each entity as a string. Use empty array if none found.\n\nText:\n{{insert text}}',
+ 'Structures extraction of key entities into JSON arrays for further analysis.'),
+('550e8400-e29b-41d4-a716-446655440022', 'Timeline Extraction', 'extract', 'extract',
+ 'Extract all events with dates from the text. Return a JSON array of objects with keys "event" and "date" (YYYY-MM-DD). If an event has no date, use null for the date.\n\nText:\n{{insert text}}',
+ 'Organizes chronological information clearly, handling missing dates explicitly.'),
+('550e8400-e29b-41d4-a716-446655440023', 'Peer Feedback', 'critique', 'review',
+ 'Review the draft below for {{audience}}. Provide: 1) Two strengths, 2) Two weaknesses, 3) one improved example (<= 50 words). Focus on clarity.\n\nDraft:\n{{insert draft}}',
+ 'Encourages constructive feedback by highlighting positives, issues, and an actionable rewrite.'),
+('550e8400-e29b-41d4-a716-446655440024', 'Design Review', 'critique', 'review',
+ 'Evaluate the following design proposal. List two strong points and two concerns, and suggest one improvement. Focus on functionality and user experience.\n\nDesign:\n{{insert description}}',
+ 'Organizes design critique into clear positives, issues, and one actionable improvement.'),
+('550e8400-e29b-41d4-a716-446655440025', 'Social Media Post', 'writing', 'content',
+ 'Draft a social media post about {{topic}}. Use a friendly, engaging tone. Include a catchy opening, one or two main points, and a call to action. Keep it under 280 characters.',
+ 'Focuses the message for brevity and engagement on social platforms.'),
+('550e8400-e29b-41d4-a716-446655440026', 'Press Release', 'writing', 'content',
+ 'Draft a press release for {{announcement}}. Include: 1) headline, 2) one-sentence lead, 3) two short paragraphs of details, 4) company boilerplate. Use a professional tone.',
+ 'Ensures standard press release format with clear structure and content.'),
+('550e8400-e29b-41d4-a716-446655440027', 'Proposal Outline', 'writing', 'content',
+ 'Create an outline for a project proposal titled "{{title}}". Include: 1) objective, 2) approach or methodology, 3) timeline, 4) budget. Use bullet points.',
+ 'Organizes key elements of a proposal clearly before writing the full document.'),
+('550e8400-e29b-41d4-a716-446655440028', 'Meeting Agenda', 'writing', 'content',
+ 'Draft an agenda for a meeting on {{topic}}. Include: 1) title, 2) meeting objective, 3) list of agenda items with time slots, 4) expected outcomes. Keep it concise.',
+ 'Provides clear structure to guide a productive meeting.')
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  category = EXCLUDED.category,
+  intent = EXCLUDED.intent,
+  content = EXCLUDED.content,
+  why_it_works = EXCLUDED.why_it_works;

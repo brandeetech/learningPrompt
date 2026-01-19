@@ -36,9 +36,11 @@ export function NavBar() {
     }
   };
 
+  const isHomePage = pathname === "/";
+
   return (
-    <header className="sticky top-0 z-20 border-b border-border/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/85 bg-white/90">
-      <div className="container flex items-center justify-between py-4">
+    <header className="sticky top-0 z-20 border-b border-border bg-card-alt py-2.5">
+      <div className="container flex items-center justify-between py-6">
         <Link href="/" className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-xl bg-brand text-white flex items-center justify-center text-sm font-semibold shadow-sm">
             AR
@@ -49,7 +51,7 @@ export function NavBar() {
           </div>
         </Link>
         <nav className="flex items-center gap-2 text-sm">
-          {links.map((link) => {
+          {links.filter(link => link.href !== "/").map((link) => {
             const active =
               pathname === link.href ||
               (link.href !== "/" && pathname?.startsWith(link.href));
@@ -70,11 +72,18 @@ export function NavBar() {
           <div className="ml-2 flex items-center gap-2">
             {loading ? (
               <div className="h-9 w-20 rounded-full bg-card-alt animate-pulse" />
+            ) : isHomePage ? (
+              <Link
+                href="/play"
+                className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-accent/90"
+              >
+                Practice
+              </Link>
             ) : user ? (
               <>
                 <Link
                   href="/play"
-                  className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-strong"
+                  className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-accent/90"
                 >
                   Practice
                 </Link>

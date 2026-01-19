@@ -7,6 +7,8 @@ import Link from "next/link";
 import { getScoreColor, getScoreBgColor, getScoreLabel } from "@/lib/evaluationColors";
 import { getCurrentUser } from "@/lib/auth";
 import type { Template } from "@/lib/db/schema";
+import { PromptHistory } from "@/components/promptHistory";
+import type { Prompt, PromptVersion } from "@/lib/db/schema";
 
 type HistoryItem = {
   id: number;
@@ -19,10 +21,12 @@ type HistoryItem = {
   timestamp: string;
 };
 
+type PromptWithVersion = Prompt & { latestVersion?: PromptVersion };
+
 const models = [
-  { id: "gpt-4.1", label: "GPT" },
-  { id: "claude-3.5", label: "Claude" },
-  { id: "gemini-1.5", label: "Gemini" },
+  { id: "openai/gpt-4o-mini", label: "GPT" },
+  { id: "anthropic/claude-3-5-sonnet-20241022", label: "Claude" },
+  { id: "google/gemini-1.5-flash", label: "Gemini" },
 ];
 
 const startingPrompt =
@@ -38,6 +42,8 @@ export default function PracticePage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [outputExpanded, setOutputExpanded] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const searchParams = useSearchParams();
 
   // Check authentication
@@ -175,7 +181,7 @@ export default function PracticePage() {
         
         console.log("[Practice] Output generated", {
           runId,
-          outputLength: output.length,
+          outputLength: (output || "").length,
           duration: `${outputDuration.toFixed(2)}ms`,
         });
       } else {
@@ -221,6 +227,8 @@ export default function PracticePage() {
 
         if (saveRes.ok) {
           console.log("[Practice] Run saved to database", { runId });
+          // Refresh history sidebar
+          setHistoryRefreshKey(prev => prev + 1);
         } else {
           const errorData = await saveRes.json();
           console.error("[Practice] Failed to save run", { runId, error: errorData.message });
@@ -256,8 +264,37 @@ export default function PracticePage() {
     setLoading(false);
   };
 
+  const handleSelectPrompt = (prompt: PromptWithVersion) => {
+    if (prompt.latestVersion) {
+      // Load the prompt content
+      if (prompt.latestVersion.systemInstructions) {
+        setSystemPrompt(prompt.latestVersion.systemInstructions);
+      } else {
+        setSystemPrompt('');
+      }
+      
+      if (prompt.latestVersion.userMessage) {
+        setUserMessage(prompt.latestVersion.userMessage);
+      } else {
+        setUserMessage(prompt.latestVersion.content);
+      }
+      
+      if (prompt.intent) {
+        setIntent(prompt.intent);
+      }
+      
+      if (prompt.latestVersion.model) {
+        setModel(prompt.latestVersion.model);
+      }
+      
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="space-y-6 pt-8">
+      <PromptHistory refreshKey={historyRefreshKey} onSelectPrompt={handleSelectPrompt} />
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-ink">
           Practice
@@ -267,43 +304,49 @@ export default function PracticePage() {
         </p>
       </div>
 
-      <div className="card grid gap-6 p-6 lg:grid-cols-[1fr_1fr]">
-        {/* Left: Input */}
+      <div className="card space-y-6 p-6">
+        {/* Top Section: All Input Fields in Rows */}
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {models.map((m) => (
-              <button
-                key={m.id}
+          {/* Model Selector Row */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-ink">Model</label>
+            <div className="flex flex-wrap items-center gap-2">
+              {models.map((m) => (
+                <button
+                  key={m.id}
                   onClick={() => setModel(m.id)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  model === m.id
-                    ? "border-brand bg-brand text-white shadow-sm"
-                    : "border-border text-ink hover:border-brand"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    model === m.id
+                      ? "border-brand bg-brand text-white shadow-sm"
+                      : "border-border text-ink hover:border-brand"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
           </div>
           
+          {/* Intent Row */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-ink">Your Intent (optional)</label>
             <input
               type="text"
               value={intent}
               onChange={(e) => setIntent(e.target.value)}
-              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+              className="w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
               placeholder="What do you want to achieve? (e.g., 'Extract top 3 customer complaints')"
             />
           </div>
 
+          {/* System Prompt Row */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-ink">System Prompt (optional)</label>
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
               rows={4}
-              className="w-full rounded-lg border border-border bg-white p-3 font-mono text-xs text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+              className="w-full rounded-lg border border-border bg-white p-4 font-mono text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
               placeholder="You are a helpful assistant. (System instructions that set context and behavior)"
             />
             <p className="text-xs text-muted">
@@ -311,13 +354,14 @@ export default function PracticePage() {
             </p>
           </div>
           
+          {/* User Message Row */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-ink">User Message</label>
             <textarea
               value={userMessage}
               onChange={(e) => setUserMessage(e.target.value)}
-              rows={8}
-              className="w-full rounded-lg border border-border bg-white p-3 font-mono text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+              rows={6}
+              className="w-full rounded-lg border border-border bg-white p-4 font-mono text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
               placeholder="Write your message here..."
             />
             <p className="text-xs text-muted">
@@ -325,75 +369,97 @@ export default function PracticePage() {
             </p>
           </div>
           
-          <button
-            onClick={handleRun}
-            disabled={loading || !userMessage.trim()}
-            className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
-          >
-            {loading ? "Running…" : "Run prompt"}
-          </button>
+          {/* Run Button Row */}
+          <div>
+            <button
+              onClick={handleRun}
+              disabled={loading || !userMessage.trim()}
+              className="w-full rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
+            >
+              {loading ? "Running…" : "Run prompt"}
+            </button>
+          </div>
         </div>
 
-        {/* Right: Results */}
-        <div className="space-y-4">
-          {latest?.output && (
-            <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+        {/* Second Row: Output (Collapsible) */}
+        {latest?.output && (
+          <div className="rounded-lg border border-border bg-white shadow-sm">
+            <button
+              onClick={() => setOutputExpanded(!outputExpanded)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-card-alt/50 transition"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                 Output
               </p>
-              <div className="rounded border border-border bg-card-alt p-3">
-                <pre className="whitespace-pre-wrap text-xs text-ink font-mono">
-                  {latest.output}
-                </pre>
+              <svg
+                className={`w-4 h-4 text-muted transition-transform ${outputExpanded ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {outputExpanded && (
+              <div className="border-t border-border p-4">
+                <div className="rounded border border-border bg-card-alt p-3 max-h-[400px] overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-xs text-ink font-mono">
+                    {latest.output}
+                  </pre>
+                </div>
               </div>
-            </div>
-          )}
-          
-          <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-3">
-              Evaluation
-            </p>
-            {latest ? (
-              <EvaluationView item={latest} />
-            ) : (
-              <p className="text-sm text-muted">
-                Run your prompt to see feedback.
-              </p>
             )}
           </div>
+        )}
 
-          {history.length > 0 && (
-            <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
-                History ({history.length})
-              </p>
-              <ul className="space-y-1.5">
-                {history.slice(0, 3).map((item) => (
-                  <li
-                    key={item.id}
-                    onClick={() => {
+        {/* Third Row: Evaluation */}
+        {latest && (
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Evaluation
+            </p>
+            <EvaluationView 
+              item={latest} 
+              onUseRewrite={(rewrite) => {
+                setUserMessage(rewrite);
+                setOutputExpanded(false);
+              }}
+            />
+          </div>
+        )}
+
+        {/* History Section */}
+        {history.length > 0 && (
+          <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
+              History ({history.length})
+            </p>
+            <ul className="space-y-1.5">
+              {history.slice(0, 3).map((item) => (
+                <li
+                  key={item.id}
+                  onClick={() => {
                     // Try to parse system prompt and user message if they were stored separately
                     setUserMessage(item.prompt);
                   }}
-                    className="cursor-pointer rounded border border-border bg-card-alt/50 p-2 text-xs text-muted hover:bg-card-alt transition"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-ink">V{item.id}</span>
-                      <span className="text-[10px]">{item.model}</span>
-                    </div>
-                    <p className="mt-0.5 line-clamp-1">{item.prompt}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+                  className="cursor-pointer rounded border border-border bg-card-alt/50 p-2 text-xs text-muted hover:bg-card-alt transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-ink">V{item.id}</span>
+                    <span className="text-[10px]">{item.model}</span>
+                  </div>
+                  <p className="mt-0.5 line-clamp-1">{item.prompt}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function EvaluationView({ item }: { item: HistoryItem }) {
+function EvaluationView({ item, onUseRewrite }: { item: HistoryItem; onUseRewrite?: (rewrite: string) => void }) {
   const { evaluation, intent } = item;
   const score = evaluation.score || {
     intentClarity: 50,
@@ -405,14 +471,14 @@ function EvaluationView({ item }: { item: HistoryItem }) {
   };
 
   return (
-    <div className="mt-3 space-y-4 text-sm text-ink">
-      {/* Score Overview */}
-      <div className="rounded-lg border border-border bg-card-alt p-4">
+    <div className="space-y-4">
+      {/* First Row: Overall Score */}
+      <div className="rounded-lg border border-border bg-card-alt p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             Overall Score
           </p>
-          <div className={`rounded-full px-3 py-1 text-sm font-semibold ${getScoreBgColor(score.overall)} ${getScoreColor(score.overall)}`}>
+          <div className={`rounded-full px-4 py-1.5 text-sm font-semibold ${getScoreBgColor(score.overall)} ${getScoreColor(score.overall)}`}>
             {score.overall}/100 · {getScoreLabel(score.overall)}
           </div>
         </div>
@@ -438,58 +504,85 @@ function EvaluationView({ item }: { item: HistoryItem }) {
         )}
       </div>
 
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          1) What the prompt did
+      {/* Second Row: What it did and Why - Two Columns */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* What it did */}
+        <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-3">
+            1) What the prompt did
+          </p>
+          <ul className="space-y-2">
+            {evaluation.whatHappened.map((entry) => (
+              <li
+                key={entry}
+                className="rounded-lg bg-card-alt/60 px-3 py-2 text-sm text-ink"
+              >
+                {entry}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Why */}
+        <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-3">
+            2) Why that output would happen
+          </p>
+          <ul className="space-y-2">
+            {evaluation.why.map((entry) => (
+              <li
+                key={entry}
+                className="rounded-lg bg-card-alt/60 px-3 py-2 text-sm text-ink"
+              >
+                {entry}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Third Row: Improvements - Full Width, Focused */}
+      <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-3">
+          3) How to improve
         </p>
-        <ul className="mt-1 space-y-2">
-          {evaluation.whatHappened.map((entry) => (
+        <ul className="space-y-3">
+          {evaluation.improvements.map((entry, index) => (
             <li
-              key={entry}
-              className="rounded-lg bg-card-alt/60 px-3 py-2 text-ink"
+              key={index}
+              className="rounded-lg bg-brand/5 border border-brand/20 px-4 py-3 text-sm text-ink"
             >
-              {entry}
+              <div className="flex items-start gap-2">
+                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white mt-0.5">
+                  {index + 1}
+                </span>
+                <span>{entry}</span>
+              </div>
             </li>
           ))}
         </ul>
       </div>
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          2) Why that output would happen
-        </p>
-        <ul className="mt-1 space-y-2">
-          {evaluation.why.map((entry) => (
-            <li
-              key={entry}
-              className="rounded-lg bg-card-alt/60 px-3 py-2 text-ink"
+
+      {/* Final Row: Rewrite with Use Button */}
+      <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            4) Improved rewrite
+          </p>
+          {onUseRewrite && evaluation.rewrite && (
+            <button
+              onClick={() => onUseRewrite(evaluation.rewrite)}
+              className="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-strong"
             >
-              {entry}
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          3) How to improve next (1–3 bullets)
-        </p>
-        <ul className="mt-1 space-y-2">
-          {evaluation.improvements.map((entry) => (
-            <li
-              key={entry}
-              className="rounded-lg bg-card-alt/60 px-3 py-2 text-ink"
-            >
-              {entry}
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          4) Example rewrite (optional)
-        </p>
-        <p className="mt-1 rounded-lg border border-dashed border-border bg-card-alt/60 px-3 py-2 text-muted">
-          {evaluation.rewrite}
-        </p>
+              Use this improvement
+            </button>
+          )}
+        </div>
+        <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-4">
+          <pre className="whitespace-pre-wrap text-sm text-ink font-mono">
+            {evaluation.rewrite}
+          </pre>
+        </div>
       </div>
     </div>
   );

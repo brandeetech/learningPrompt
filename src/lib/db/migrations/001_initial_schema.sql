@@ -52,40 +52,14 @@ CREATE TABLE IF NOT EXISTS templates (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Usage logs table
-CREATE TABLE IF NOT EXISTS usage_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  prompt_version_id UUID REFERENCES prompt_versions(id) ON DELETE SET NULL,
-  model TEXT NOT NULL,
-  tokens_used INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Provider keys table (for user's own API keys)
-CREATE TABLE IF NOT EXISTS provider_keys (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider TEXT NOT NULL CHECK (provider IN ('openai', 'anthropic', 'google')),
-  api_key_encrypted TEXT NOT NULL, -- Should be encrypted at application level
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(user_id, provider)
-);
-
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_prompts_user_id ON prompts(user_id);
 CREATE INDEX IF NOT EXISTS idx_prompt_versions_prompt_id ON prompt_versions(prompt_id);
-CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id ON usage_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_usage_logs_created_at ON usage_logs(created_at);
-CREATE INDEX IF NOT EXISTS idx_provider_keys_user_id ON provider_keys(user_id);
 
 -- Row Level Security (RLS) policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prompts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prompt_versions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE usage_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE provider_keys ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users (users can only see/update their own data)
 CREATE POLICY "Users can view own data" ON users
@@ -122,26 +96,6 @@ CREATE POLICY "Users can insert own prompt versions" ON prompt_versions
     )
   );
 
--- RLS Policies for usage_logs
-CREATE POLICY "Users can view own usage logs" ON usage_logs
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own usage logs" ON usage_logs
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- RLS Policies for provider_keys
-CREATE POLICY "Users can view own provider keys" ON provider_keys
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own provider keys" ON provider_keys
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own provider keys" ON provider_keys
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own provider keys" ON provider_keys
-  FOR DELETE USING (auth.uid() = user_id);
-
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -159,9 +113,6 @@ CREATE TRIGGER update_prompts_updated_at BEFORE UPDATE ON prompts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_templates_updated_at BEFORE UPDATE ON templates
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_provider_keys_updated_at BEFORE UPDATE ON provider_keys
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default templates (optional - can be done via admin later)

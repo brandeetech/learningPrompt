@@ -54,7 +54,6 @@
 2. **prompts** - User prompts with intent field
 3. **prompt_versions** - Version history with output, evaluation scores, and data
 4. **templates** - Curated prompt templates
-5. **usage_logs** - Token usage tracking
 
 ### Key Features:
 - Row Level Security (RLS) policies

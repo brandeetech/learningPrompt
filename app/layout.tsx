@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/nav";
+import { Footer } from "@/components/footer";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,9 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${jetbrains.variable} antialiased`}>
-        <div className="min-h-screen bg-background text-ink">
+        <div className="min-h-screen bg-background text-ink flex flex-col">
           <NavBar />
-          <main className="container py-12">{children}</main>
+          <main className="container py-[10px] flex-1">{children}</main>
+          <Footer />
         </div>
       </body>
     </html>

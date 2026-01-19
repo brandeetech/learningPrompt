@@ -45,43 +45,53 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-8 pt-8">
-      <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Templates
-        </p>
-        <h1 className="text-3xl font-semibold text-ink">
-          Patterned prompts with intent and rationale
-        </h1>
-        <p className="max-w-2xl text-sm text-muted">
-          Each template includes intent, the prompt itself, and why it works—so users learn the structure, not just copy it. Load a template, edit context, and run it in the playground with feedback.
-        </p>
-        
-        {/* Search */}
-        <div className="max-w-md">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search templates by title, intent, or content..."
-            className="w-full rounded-lg border border-border bg-white px-4 py-2 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
-          />
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Templates
+          </p>
+          <h1 className="text-3xl font-semibold text-ink">
+            Patterned prompts with intent and rationale
+          </h1>
+          <p className="max-w-2xl text-sm text-muted">
+            Each template includes intent, the prompt itself, and why it works—so users learn the structure, not just copy it. Load a template, edit context, and run it in the playground with feedback.
+          </p>
         </div>
-
-        {/* Categories */}
-        <div className="flex flex-wrap items-center gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategory(cat)}
-              className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
-                category === cat
-                  ? "border-brand bg-brand text-white shadow-sm"
-                  : "border-border text-ink hover:border-brand"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        
+        {/* Search Card with Categories */}
+        <div className="card p-5 space-y-4">
+          <div>
+            <label htmlFor="search" className="block text-xs font-semibold text-ink mb-2">
+              Search Templates
+            </label>
+            <input
+              id="search"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by title, intent, or content..."
+              className="w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/60 focus:border-brand transition"
+            />
+          </div>
+          
+          <div>
+            <p className="text-xs font-semibold text-ink mb-2">Categories</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                    category === cat
+                      ? "border-brand bg-brand text-white shadow-sm"
+                      : "border-border text-ink hover:border-brand hover:bg-card-alt"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -101,39 +111,39 @@ export default function TemplatesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2">
           {visible.map((tpl) => (
-            <div key={tpl.id} className="card p-5 space-y-4">
+            <div key={tpl.id} className="card p-6 space-y-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
                     {tpl.category}
                   </p>
-                  <h3 className="text-lg font-semibold text-ink">{tpl.title}</h3>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-xl font-semibold text-ink">{tpl.title}</h3>
+                    <span className="inline-flex items-center px-3 py-1 rounded-lg bg-brand/10 text-brand text-xs font-semibold border border-brand/20">
+                      {tpl.intent}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-ink">Intent</p>
-                <p className="text-sm text-muted leading-relaxed">{tpl.intent}</p>
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-ink">Prompt Template</p>
-                <pre className="max-h-40 overflow-auto rounded-lg border border-border bg-card-alt p-3 text-xs text-ink font-mono leading-relaxed">
+                <p className="text-sm font-semibold text-ink">Prompt Template</p>
+                <pre className="max-h-60 overflow-auto rounded-lg border border-border bg-card-alt p-4 text-sm text-ink font-mono leading-relaxed whitespace-pre-wrap">
                   {tpl.content}
                 </pre>
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-ink">Why it works</p>
-                <p className="text-xs text-muted leading-relaxed">{tpl.whyItWorks}</p>
+                <p className="text-sm font-semibold text-ink">Why it works</p>
+                <p className="text-sm text-muted leading-relaxed">{tpl.whyItWorks}</p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
                 <Link
                   href={`/play?template=${tpl.id}`}
-                  className="flex-1 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white text-center shadow-sm transition hover:bg-brand-strong"
+                  className="flex-1 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white text-center shadow-sm transition hover:bg-brand-strong"
                 >
                   Use in Playground
                 </Link>
@@ -145,7 +155,7 @@ export default function TemplatesPage() {
                       setTimeout(() => setCopied(null), 1600);
                     }
                   }}
-                  className="rounded-full border border-border px-3 py-2 text-xs font-semibold text-ink transition hover:border-brand hover:bg-card-alt"
+                  className="rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-brand hover:bg-card-alt"
                 >
                   {copied === tpl.id ? "✓ Copied" : "Copy"}
                 </button>

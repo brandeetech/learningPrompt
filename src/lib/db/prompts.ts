@@ -1,6 +1,6 @@
 import { getDb } from "./client";
 import { prompts, promptVersions, type Prompt, type NewPrompt, type PromptVersion, type NewPromptVersion } from "./schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export async function getPromptById(promptId: string): Promise<Prompt | null> {
   
@@ -21,6 +21,29 @@ export async function getPromptsByUserId(userId: string): Promise<Prompt[]> {
     .from(prompts)
     .where(eq(prompts.userId, userId))
     .orderBy(desc(prompts.createdAt));
+}
+
+/**
+ * Get prompts with their latest version information
+ */
+export async function getPromptsWithLatestVersion(userId: string): Promise<Array<Prompt & { latestVersion?: PromptVersion }>> {
+  const db = getDb();
+  if (!db) return [];
+
+  const userPrompts = await getPromptsByUserId(userId);
+  
+  // Get latest version for each prompt
+  const promptsWithVersions = await Promise.all(
+    userPrompts.map(async (prompt) => {
+      const versions = await getPromptVersions(prompt.id);
+      return {
+        ...prompt,
+        latestVersion: versions[0] || undefined,
+      };
+    })
+  );
+
+  return promptsWithVersions;
 }
 
 export async function createPrompt(params: {
