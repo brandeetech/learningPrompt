@@ -42,8 +42,8 @@ async function getExecutedMigrations(): Promise<string[]> {
   try {
     const result = await client`
       SELECT name FROM _migrations ORDER BY executed_at ASC
-    `;
-    return result.map((m: { name: string }) => m.name);
+    ` as Array<{ name: string }>;
+    return result.map((m) => m.name);
   } catch (error) {
     // Table might not exist yet
     return [];
