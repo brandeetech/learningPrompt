@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Evaluation, estimateTokens } from "@/lib/promptEvaluator";
 import Link from "next/link";
@@ -32,7 +32,7 @@ const models = [
 const startingPrompt =
   "Act as a prompt coach. I want to write a prompt that extracts the top 3 customer complaints from support tickets. Help me design it.";
 
-export default function PracticePage() {
+function PracticePage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [systemPrompt, setSystemPrompt] = useState("");
@@ -671,5 +671,20 @@ function ScoreItem({ label, score, className = "" }: { label: string; score: num
         {score}
       </span>
     </div>
+  );
+}
+
+export default function PracticePageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand/20 border-t-brand mb-4" />
+          <p className="text-sm text-muted">Loading...</p>
+        </div>
+      </div>
+    }>
+      <PracticePage />
+    </Suspense>
   );
 }
